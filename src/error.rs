@@ -21,8 +21,8 @@ impl error::Error for Error {
 
     fn cause(&self) -> Option<&error::Error> {
         match *self {
-            Error::IO(ref io) => io.cause(),
-            Error::Scroll(ref err) => err.cause(),
+            Error::IO(ref io) => io.source(),
+            Error::Scroll(ref err) => err.source(),
             Error::MalFormed(_) => None,
         }
     }

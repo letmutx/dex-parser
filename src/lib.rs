@@ -3,9 +3,11 @@ extern crate scroll_derive;
 
 use cesu8::from_java_cesu8;
 
+use memmap::MmapOptions;
 use scroll::{self, ctx, Pread, Uleb128};
+use std::borrow::Cow;
 use std::convert::Into;
-use std::iter::FromIterator;
+use std::fs::File;
 use std::ops::Deref;
 
 mod error;
@@ -40,31 +42,33 @@ pub struct Header {
 }
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
-pub struct JString {
-    string: String,
+pub struct JString<'a> {
+    string: Cow<'a, str>,
 }
 
-impl Into<String> for JString {
+impl<'a> Into<String> for JString<'a> {
     fn into(self) -> String {
-        self.string
+        self.string.into_owned()
     }
 }
 
-impl From<String> for JString {
+impl<'a> From<String> for JString<'a> {
     fn from(string: String) -> Self {
-        JString { string }
+        JString {
+            string: Cow::from(string),
+        }
     }
 }
 
-impl Deref for JString {
-    type Target = String;
+impl<'a> Deref for JString<'a> {
+    type Target = str;
 
     fn deref(&self) -> &Self::Target {
         &self.string
     }
 }
 
-impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
+impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString<'a> {
     type Error = error::Error;
     type Size = usize;
 
@@ -80,7 +84,7 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
         let size = *offset + bytes.len();
         Ok((
             JString {
-                string: from_java_cesu8(bytes).unwrap().into_owned(),
+                string: Cow::from(from_java_cesu8(bytes).unwrap()),
             },
             size,
         ))
@@ -91,11 +95,16 @@ pub struct Type(u32);
 
 #[derive(Debug)]
 pub struct Dex {
-    header: Header,
-    strings: List<JString>,
+    source: memmap::Mmap,
+    inner: DexInner,
 }
 
-impl<'a> ctx::TryFromCtx<'a, ()> for Dex {
+#[derive(Debug)]
+struct DexInner {
+    header: Header,
+}
+
+impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
     type Error = error::Error;
     type Size = usize;
 
@@ -107,88 +116,14 @@ impl<'a> ctx::TryFromCtx<'a, ()> for Dex {
             _ => return Err(error::Error::MalFormed("Bad endian tag".to_string())),
         };
         let header = source.pread_with::<Header>(0, endian)?;
-        let strings = {
-            let ctx = ListCtx {
-                size: header.string_ids_size as usize,
-                endian,
-            };
-            let strings: List<u32> = source.pread_with(header.string_ids_off as usize, ctx)?;
-            let mut result = List::new();
-            for offset in strings.iter() {
-                result.push(source.pread::<JString>(*offset as usize)?);
-            }
-            result
-        };
-
-        let types: List<Type> = {
-            let ctx = ListCtx {
-                size: header.type_ids_size as usize,
-                endian,
-            };
-            let type_ids: List<u32> = source.pread_with(header.type_ids_off as usize, ctx)?;
-            type_ids.iter().map(|string_id| Type(*string_id)).collect()
-        };
-
-        unimplemented!()
+        Ok((DexInner { header }, 0))
     }
 }
 
-#[derive(Clone, Copy, Default)]
-struct ListCtx {
-    size: usize,
-    endian: scroll::Endian,
-}
-
-#[derive(Debug)]
-struct List<T> {
-    inner: Vec<T>,
-}
-
-impl<T> FromIterator<T> for List<T> {
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let mut result = List::new();
-        iter.into_iter().for_each(|s| result.push(s));
-        result
+impl Dex {
+    pub fn from_file(file: &File) -> Result<Dex> {
+        let map = unsafe { MmapOptions::new().map(&file)? };
+        let inner = map.pread(0)?;
+        Ok(Dex { source: map, inner })
     }
-}
-
-impl<T> List<T> {
-    fn new() -> Self {
-        List { inner: Vec::new() }
-    }
-
-    fn iter(&self) -> impl Iterator<Item = &T> {
-        self.inner.iter()
-    }
-
-    fn push(&mut self, val: T) {
-        self.inner.push(val);
-    }
-}
-
-impl<'a, T> ctx::TryFromCtx<'a, ListCtx> for List<T>
-where
-    T: ctx::TryFromCtx<'a, scroll::Endian, Size = usize, Error = scroll::Error>,
-{
-    type Error = error::Error;
-    type Size = usize;
-
-    fn try_from_ctx(source: &'a [u8], context: ListCtx) -> Result<(Self, Self::Size)> {
-        let mut inner = Vec::with_capacity(context.size);
-        let offset = &mut 0;
-        for _ in 0..context.size {
-            inner.push(
-                source
-                    .gread_with::<T>(offset, context.endian)
-                    .map_err(error::Error::from)?,
-            );
-        }
-        Ok((List { inner }, *offset))
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {}
 }

@@ -7,6 +7,7 @@ use std::io;
 pub enum Error {
     MalFormed(String),
     IO(io::Error),
+    InvalidId(String),
     Scroll(scroll::Error),
 }
 
@@ -16,6 +17,7 @@ impl error::Error for Error {
             Error::IO(_) => "IO error",
             Error::MalFormed(_) => "Entity is malformed in some way",
             Error::Scroll(_) => "Scroll error",
+            Error::InvalidId(_) => "Invalid index",
         }
     }
 
@@ -24,6 +26,7 @@ impl error::Error for Error {
             Error::IO(ref io) => io.source(),
             Error::Scroll(ref err) => err.source(),
             Error::MalFormed(_) => None,
+            Error::InvalidId(_) => None,
         }
     }
 }
@@ -46,6 +49,7 @@ impl Display for Error {
             Error::IO(ref err) => write!(fmt, "{}", err),
             Error::Scroll(ref err) => write!(fmt, "{}", err),
             Error::MalFormed(ref msg) => write!(fmt, "Malformed entity: {}", msg),
+            Error::InvalidId(ref msg) => write!(fmt, "{}", msg),
         }
     }
 }

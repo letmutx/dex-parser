@@ -1,16 +1,18 @@
 #[macro_use]
 extern crate scroll_derive;
 
-use cesu8::from_java_cesu8;
-
-use memmap::MmapOptions;
-use scroll::{self, ctx, Pread, Uleb128};
-use std::borrow::Cow;
-use std::convert::Into;
+use memmap::{Mmap, MmapOptions};
+use scroll::{self, ctx, Pread};
+use std::clone::Clone;
 use std::fs::File;
-use std::ops::Deref;
 
+use source::Source;
+use string::StringCache;
+
+mod cache;
 mod error;
+mod source;
+mod string;
 
 type Result<T> = std::result::Result<T, error::Error>;
 
@@ -41,67 +43,27 @@ pub struct Header {
     pub data_off: u32,
 }
 
-#[derive(Debug, Hash, Eq, PartialEq, Clone)]
-pub struct JString<'a> {
-    string: Cow<'a, str>,
-}
+pub type TypeId = usize;
 
-impl<'a> Into<String> for JString<'a> {
-    fn into(self) -> String {
-        self.string.into_owned()
-    }
-}
-
-impl<'a> From<String> for JString<'a> {
-    fn from(string: String) -> Self {
-        JString {
-            string: Cow::from(string),
-        }
-    }
-}
-
-impl<'a> Deref for JString<'a> {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        &self.string
-    }
-}
-
-impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString<'a> {
-    type Error = error::Error;
-    type Size = usize;
-
-    fn try_from_ctx(source: &'a [u8], _: scroll::Endian) -> Result<(Self, Self::Size)> {
-        let offset = &mut 0;
-        let _ = Uleb128::read(source, offset)?;
-        let count = source
-            .iter()
-            .skip(*offset)
-            .take_while(|c| **c != b'\0')
-            .count();
-        let bytes = &source[*offset..*offset + count];
-        let size = *offset + bytes.len();
-        Ok((
-            JString {
-                string: Cow::from(from_java_cesu8(bytes).unwrap()),
-            },
-            size,
-        ))
-    }
-}
-
-pub struct Type(u32);
-
-#[derive(Debug)]
-pub struct Dex {
-    source: memmap::Mmap,
+pub struct Dex<T> {
+    source: Source<T>,
+    string_cache: StringCache<T>,
     inner: DexInner,
 }
 
 #[derive(Debug)]
 struct DexInner {
     header: Header,
+}
+
+impl DexInner {
+    fn str_table_offset(&self) -> usize {
+        self.header.string_ids_off as usize
+    }
+
+    fn str_table_len(&self) -> usize {
+        self.header.string_ids_size as usize
+    }
 }
 
 impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
@@ -120,10 +82,30 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
     }
 }
 
-impl Dex {
-    pub fn from_file(file: &File) -> Result<Dex> {
+pub struct Type;
+
+impl<T> Dex<T>
+where
+    T: AsRef<[u8]>,
+{
+    pub fn from_file(file: &File) -> Result<Dex<Mmap>> {
         let map = unsafe { MmapOptions::new().map(&file)? };
-        let inner = map.pread(0)?;
-        Ok(Dex { source: map, inner })
+        let inner: DexInner = map.pread(0)?;
+        let source = Source::new(map);
+        let cache = StringCache::new(
+            source.clone(),
+            inner.str_table_offset(),
+            inner.str_table_len(),
+            4096,
+        );
+        Ok(Dex {
+            source: source.clone(),
+            string_cache: cache,
+            inner: inner,
+        })
+    }
+
+    pub fn get_type(&self, _type_id: TypeId) -> Result<Type> {
+        unimplemented!()
     }
 }

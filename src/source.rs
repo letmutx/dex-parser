@@ -40,6 +40,17 @@ where
     }
 }
 
+impl<T> Index<std::ops::RangeFrom<usize>> for Source<T>
+where
+    T: AsRef<[u8]>,
+{
+    type Output = [u8];
+
+    fn index(&self, index: std::ops::RangeFrom<usize>) -> &Self::Output {
+        &self.inner.as_ref().as_ref()[index]
+    }
+}
+
 impl<T> Clone for Source<T> {
     fn clone(&self) -> Self {
         Self {

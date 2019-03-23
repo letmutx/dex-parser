@@ -1,7 +1,8 @@
-use scroll;
 use std::error;
 use std::fmt::{self, Display};
 use std::io;
+
+use scroll;
 
 #[derive(Debug)]
 pub enum Error {

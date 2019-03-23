@@ -1,18 +1,17 @@
-use crate::error;
-use crate::Result;
-use cesu8::from_java_cesu8;
-
-use scroll::{self, ctx, Pread, Uleb128};
 use std::convert::AsRef;
 use std::convert::Into;
 use std::ops::Deref;
-use std::rc::Rc;
 
-use crate::cache::Cache;
+use cesu8::from_java_cesu8;
+use scroll::{self, ctx, Pread, Uleb128};
+
+use crate::cache::{Cache, Ref};
+use crate::error;
 use crate::error::Error;
 use crate::source::Source;
+use crate::Result;
 
-pub type StringId = usize;
+pub type StringId = u32;
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub struct JString {
@@ -64,8 +63,8 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
 
 pub(crate) struct StringCache<T> {
     source: Source<T>,
-    offset: usize,
-    len: usize,
+    offset: u32,
+    len: u32,
     inner: Cache<StringId, JString>,
 }
 
@@ -73,7 +72,7 @@ impl<T> StringCache<T>
 where
     T: AsRef<[u8]>,
 {
-    pub(crate) fn new(source: Source<T>, offset: usize, len: usize, cache_size: usize) -> Self {
+    pub(crate) fn new(source: Source<T>, offset: u32, len: u32, cache_size: usize) -> Self {
         Self {
             source,
             offset,
@@ -86,11 +85,11 @@ where
         self.source
             .as_ref()
             .as_ref()
-            .pread(self.offset + id)
+            .pread(self.offset as usize + id as usize)
             .map_err(error::Error::from)
     }
 
-    pub(crate) fn get(&self, id: StringId) -> Result<Rc<JString>> {
+    pub(crate) fn get(&self, id: StringId) -> Result<Ref<JString>> {
         if id > self.len {
             return Err(Error::InvalidId("Invalid string id".to_string()));
         }
@@ -104,6 +103,17 @@ where
                 }
                 Err(e) => Err(e),
             }
+        }
+    }
+}
+
+impl<T> Clone for StringCache<T> {
+    fn clone(&self) -> Self {
+        Self {
+            source: self.source.clone(),
+            offset: self.offset,
+            len: self.len,
+            inner: self.inner.clone(),
         }
     }
 }

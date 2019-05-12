@@ -52,6 +52,16 @@ pub(crate) struct EncodedField {
     access_flags: u64,
 }
 
+pub(crate) trait EncodedItem {
+    fn get_id(&self) -> u64;
+}
+
+impl EncodedItem for EncodedField {
+    fn get_id(&self) -> u64 {
+        self.field_id
+    }
+}
+
 impl<'a> ctx::TryFromCtx<'a, u64> for EncodedField {
     type Error = crate::error::Error;
     type Size = usize;
@@ -70,58 +80,59 @@ impl<'a> ctx::TryFromCtx<'a, u64> for EncodedField {
     }
 }
 
-pub(crate) struct EncodedFieldArray {
-    inner: Vec<EncodedField>,
+pub(crate) struct EncodedItemArray<T> {
+    inner: Vec<T>,
 }
 
-impl EncodedFieldArray {
-    pub(crate) fn into_iter(self) -> impl Iterator<Item = EncodedField> {
+impl<T: EncodedItem> EncodedItemArray<T> {
+    pub(crate) fn into_iter(self) -> impl Iterator<Item = T> {
         self.inner.into_iter()
     }
 }
 
-pub(crate) struct EncodedFieldArrayCtx<'a, T: AsRef<[u8]>> {
-    dex: &'a super::Dex<T>,
+pub(crate) struct EncodedItemArrayCtx<'a, S: AsRef<[u8]>> {
+    dex: &'a super::Dex<S>,
     len: usize,
 }
 
-impl<'a, T: AsRef<[u8]>> EncodedFieldArrayCtx<'a, T> {
-    pub(crate) fn new(dex: &'a super::Dex<T>, len: usize) -> Self {
-        EncodedFieldArrayCtx { dex, len }
+impl<'a, S: AsRef<[u8]>> EncodedItemArrayCtx<'a, S> {
+    pub(crate) fn new(dex: &'a super::Dex<S>, len: usize) -> Self {
+        Self { dex, len }
     }
 }
 
-impl<'a, T: AsRef<[u8]>> Copy for EncodedFieldArrayCtx<'a, T> {}
+impl<'a, S: AsRef<[u8]>> Copy for EncodedItemArrayCtx<'a, S> {}
 
-impl<'a, T: AsRef<[u8]>> Clone for EncodedFieldArrayCtx<'a, T> {
+impl<'a, S: AsRef<[u8]>> Clone for EncodedItemArrayCtx<'a, S> {
     fn clone(&self) -> Self {
-        EncodedFieldArrayCtx {
+        Self {
             dex: self.dex,
             len: self.len,
         }
     }
 }
 
-impl<'a, T> ctx::TryFromCtx<'a, EncodedFieldArrayCtx<'a, T>> for EncodedFieldArray
+impl<'a, S, T: 'a> ctx::TryFromCtx<'a, EncodedItemArrayCtx<'a, S>> for EncodedItemArray<T>
 where
-    T: AsRef<[u8]>,
+    S: AsRef<[u8]>,
+    T: EncodedItem + ctx::TryFromCtx<'a, u64, Size=usize, Error=crate::error::Error>
 {
     type Error = crate::error::Error;
     type Size = usize;
 
     fn try_from_ctx(
         source: &'a [u8],
-        ctx: EncodedFieldArrayCtx<'a, T>,
+        ctx: EncodedItemArrayCtx<'a, S>,
     ) -> super::Result<(Self, Self::Size)> {
         let len = ctx.len;
         let mut prev = 0;
         let offset = &mut 0;
         let mut inner = Vec::with_capacity(len);
         for _ in 0..len {
-            let encoded_field: EncodedField = source.gread_with(offset, prev)?;
-            prev = encoded_field.field_id;
-            inner.push(encoded_field);
+            let encoded_item: T = source.gread_with(offset, prev)?;
+            prev = encoded_item.get_id();
+            inner.push(encoded_item);
         }
-        Ok((EncodedFieldArray { inner }, *offset))
+        Ok((EncodedItemArray { inner }, *offset))
     }
 }

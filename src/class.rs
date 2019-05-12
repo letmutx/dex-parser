@@ -4,11 +4,12 @@ use scroll::{Pread, Uleb128};
 
 use crate::cache::Ref;
 use crate::error::Error;
-use crate::field::{EncodedFieldArray, EncodedFieldArrayCtx};
+use crate::field::{EncodedItemArray, EncodedItemArrayCtx};
 use crate::field::Field;
 use crate::jtype::Type;
 use crate::source::Source;
 use crate::string::JString;
+use crate::field::EncodedField;
 
 pub type ClassId = u32;
 // TODO: define an enum for this
@@ -34,7 +35,7 @@ impl Class {
         class_def: &ClassDefItem,
     ) -> super::Result<Self> {
         let data_off = class_def.class_data_off;
-        let into_field = |ef_array: Option<EncodedFieldArray>| {
+        let into_field = |ef_array: Option<EncodedItemArray<EncodedField>>| {
             ef_array
                 .map(|ef_array| {
                     let result: super::Result<Vec<Field>> = ef_array
@@ -82,8 +83,8 @@ impl Class {
 }
 
 pub(crate) struct ClassDataItem {
-    static_fields: Option<EncodedFieldArray>,
-    instance_fields: Option<EncodedFieldArray>,
+    static_fields: Option<EncodedItemArray<EncodedField>>,
+    instance_fields: Option<EncodedItemArray<EncodedField>>,
 }
 
 impl ClassDataItem {
@@ -98,19 +99,19 @@ impl ClassDataItem {
         let source = &dex.source.as_ref().as_ref();
         let static_field_size = Uleb128::read(source, offset)?;
         let instance_field_size = Uleb128::read(source, offset)?;
-        let _ = Uleb128::read(source, offset)?;
-        let _ = Uleb128::read(source, offset)?;
+        let direct_methods_size = Uleb128::read(source, offset)?;
+        let virtual_methods_size = Uleb128::read(source, offset)?;
         // TODO: may be use a macro here
         let static_fields = if static_field_size > 0 {
-            let encoded_array_ctx = EncodedFieldArrayCtx::new(dex, static_field_size as usize);
-            Some(source.gread_with::<EncodedFieldArray>(offset, encoded_array_ctx)?)
+            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, static_field_size as usize);
+            Some(source.gread_with::<EncodedItemArray<EncodedField>>(offset, encoded_array_ctx)?)
         } else {
             None
         };
 
         let instance_fields = if instance_field_size > 0 {
-            let encoded_array_ctx = EncodedFieldArrayCtx::new(dex, instance_field_size as usize);
-            Some(source.gread_with::<EncodedFieldArray>(offset, encoded_array_ctx)?)
+            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, instance_field_size as usize);
+            Some(source.gread_with::<EncodedItemArray<EncodedField>>(offset, encoded_array_ctx)?)
         } else {
             None
         };

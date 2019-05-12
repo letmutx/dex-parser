@@ -3,13 +3,13 @@ use std::clone::Clone;
 use scroll::{Pread, Uleb128};
 
 use crate::cache::Ref;
+use crate::encoded_item::{EncodedItemArray, EncodedItemArrayCtx};
 use crate::error::Error;
-use crate::field::{EncodedItemArray, EncodedItemArrayCtx};
+use crate::field::EncodedField;
 use crate::field::Field;
 use crate::jtype::Type;
 use crate::source::Source;
 use crate::string::JString;
-use crate::field::EncodedField;
 
 pub type ClassId = u32;
 // TODO: define an enum for this
@@ -36,14 +36,13 @@ impl Class {
     ) -> super::Result<Self> {
         let data_off = class_def.class_data_off;
         let into_field = |ef_array: Option<EncodedItemArray<EncodedField>>| {
-            ef_array
-                .map(|ef_array| {
-                    let result: super::Result<Vec<Field>> = ef_array
-                        .into_iter()
-                        .map(|encoded_field| dex.get_field(&encoded_field))
-                        .collect();
-                    result
-                })
+            ef_array.map(|ef_array| {
+                let result: super::Result<Vec<Field>> = ef_array
+                    .into_iter()
+                    .map(|encoded_field| dex.get_field(&encoded_field))
+                    .collect();
+                result
+            })
         };
 
         let (static_fields, instance_fields) = match dex.get_class_data(data_off)? {
@@ -52,14 +51,14 @@ impl Class {
                     static_fields,
                     instance_fields,
                 } = c;
-                
+
                 let static_fields = match into_field(static_fields) {
                     Some(e) => Some(e?),
                     None => None,
                 };
                 let instance_fields = match into_field(instance_fields) {
                     Some(e) => Some(e?),
-                    None => None
+                    None => None,
                 };
                 (static_fields, instance_fields)
             }

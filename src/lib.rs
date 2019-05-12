@@ -20,6 +20,7 @@ use crate::field::FieldIdItem;
 
 mod cache;
 mod class;
+mod encoded_item;
 mod error;
 mod field;
 mod jtype;

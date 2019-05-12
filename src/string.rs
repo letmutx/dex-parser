@@ -26,7 +26,7 @@ impl Into<String> for JString {
 
 impl From<String> for JString {
     fn from(string: String) -> Self {
-        JString { string: string }
+        JString { string }
     }
 }
 
@@ -96,13 +96,8 @@ where
         if let Some(string) = self.inner.get(&id) {
             Ok(string)
         } else {
-            match self.parse(id) {
-                Ok(string) => {
-                    self.inner.put(id, string);
-                    Ok(self.inner.get(&id).unwrap())
-                }
-                Err(e) => Err(e),
-            }
+            self.inner.put(id, self.parse(id)?);
+            Ok(self.inner.get(&id).unwrap())
         }
     }
 }

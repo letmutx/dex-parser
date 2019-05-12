@@ -8,19 +8,25 @@ use memmap::{Mmap, MmapOptions};
 use scroll::{self, ctx, Pread};
 
 use cache::Ref;
-use class::{Class, ClassDefItemIter, ClassId};
+use class::{Class, ClassDataItem, ClassDefItemIter, ClassId};
 use jtype::{Type, TypeId};
 use source::Source;
 use string::{JString, StringCache};
 
+use crate::field::EncodedField;
+use crate::field::Field;
+use crate::field::FieldId;
+use crate::field::FieldIdItem;
+
 mod cache;
 mod class;
 mod error;
+mod field;
 mod jtype;
 mod source;
 mod string;
 
-const NO_INDEX: u32 = 0xffffffff;
+const NO_INDEX: u32 = 0xffff_ffff;
 
 type Result<T> = std::result::Result<T, error::Error>;
 
@@ -77,7 +83,15 @@ impl DexInner {
         self.header.string_ids_size
     }
 
-    fn classes_offset(&self) -> u32 {
+    fn fields_len(&self) -> u32 {
+        self.header.field_ids_size
+    }
+
+    fn fields_offset(&self) -> u32 {
+        self.header.field_ids_off
+    }
+
+    fn class_defs_offset(&self) -> u32 {
         self.header.class_defs_off
     }
 
@@ -171,12 +185,24 @@ where
         Ok(Some(types))
     }
 
-    fn get_class_data(&self, mut offset: usize) -> Result<Option<class::ClassDataItem>> {
-        if offset == 0 {
-            Ok(None)
-        } else {
-            unimplemented!()
+    fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
+        let offset = self.inner.fields_offset() as u64 + field_id * 4;
+        let max_offset = ((self.inner.fields_len() - 1) * 4) as u64;
+        if self.inner.fields_len() == 0 || offset > max_offset {
+            return Err(error::Error::InvalidId("FieldId invalid".to_string()));
         }
+        FieldIdItem::from_dex(&self, offset)
+    }
+
+    fn get_field(&self, encoded_field: &EncodedField) -> Result<Field> {
+        Field::from_dex(self, encoded_field)
+    }
+
+    fn get_class_data(&self, offset: u32) -> Result<Option<ClassDataItem>> {
+        if offset == 0 {
+            return Ok(None);
+        }
+        ClassDataItem::from_dex(self, offset)
     }
 
     pub fn get_endian(&self) -> Endian {
@@ -185,10 +211,10 @@ where
 
     pub fn classes_iter(&self) -> impl Iterator<Item = Result<Class>> + '_ {
         let defs_len = self.inner.class_defs_len();
-        let defs_offset = self.inner.classes_offset();
+        let defs_offset = self.inner.class_defs_offset();
         let source = self.source.clone();
         let endian = self.get_endian();
         ClassDefItemIter::new(source.clone(), defs_offset, defs_len, endian)
-            .map(move |class_def_item| Class::from_item(&self, class_def_item?))
+            .map(move |class_def_item| Class::from_dex(&self, &class_def_item?))
     }
 }

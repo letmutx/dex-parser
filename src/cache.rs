@@ -1,5 +1,3 @@
-extern crate lru;
-
 use std::cell::RefCell;
 use std::cmp::Eq;
 use std::hash::Hash;

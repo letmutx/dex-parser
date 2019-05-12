@@ -19,6 +19,10 @@ use crate::field::FieldId;
 use crate::field::FieldIdItem;
 use crate::method::EncodedMethod;
 use crate::method::Method;
+use crate::method::MethodId;
+use crate::method::MethodIdItem;
+use crate::method::ProtoId;
+use crate::method::ProtoIdItem;
 
 mod cache;
 mod class;
@@ -87,11 +91,11 @@ impl DexInner {
         self.header.string_ids_size
     }
 
-    fn fields_len(&self) -> u32 {
+    fn field_ids_len(&self) -> u32 {
         self.header.field_ids_size
     }
 
-    fn fields_offset(&self) -> u32 {
+    fn field_ids_offset(&self) -> u32 {
         self.header.field_ids_off
     }
 
@@ -101,6 +105,22 @@ impl DexInner {
 
     fn class_defs_len(&self) -> u32 {
         self.header.class_defs_size
+    }
+
+    fn method_ids_offset(&self) -> u32 {
+        self.header.method_ids_off
+    }
+
+    fn method_ids_len(&self) -> u32 {
+        self.header.method_ids_size
+    }
+
+    fn proto_ids_offset(&self) -> u32 {
+        self.header.proto_ids_off
+    }
+
+    fn proto_ids_len(&self) -> u32 {
+        self.header.proto_ids_size
     }
 }
 
@@ -178,7 +198,7 @@ where
         if offset == 0 {
             return Ok(None);
         }
-        let source = &self.source.as_ref().as_ref();
+        let source = self.source.as_ref().as_ref();
         let endian = self.get_endian();
         let len = source.gread_with::<u32>(&mut offset, endian)?;
         let mut types = Vec::with_capacity(len as usize);
@@ -190,12 +210,30 @@ where
     }
 
     fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
-        let offset = self.inner.fields_offset() as u64 + field_id * 4;
-        let max_offset = ((self.inner.fields_len() - 1) * 4) as u64;
-        if self.inner.fields_len() == 0 || offset > max_offset {
+        let offset = self.inner.field_ids_offset() as u64 + field_id * 4;
+        let max_offset = ((self.inner.field_ids_len() - 1) * 4) as u64;
+        if offset > max_offset {
             return Err(error::Error::InvalidId("FieldId invalid".to_string()));
         }
-        FieldIdItem::from_dex(&self, offset)
+        FieldIdItem::from_dex(self, offset)
+    }
+
+    fn get_proto_item(&self, proto_id: ProtoId) -> Result<ProtoIdItem> {
+        let offset = self.inner.proto_ids_offset() as u64 + proto_id * 4;
+        let max_offset = 4 * (self.inner.proto_ids_len() - 1) as u64;
+        if offset > max_offset {
+            return Err(error::Error::InvalidId("FieldId invalid".to_string()));
+        }
+        ProtoIdItem::from_dex(self, offset)
+    }
+
+    fn get_method_item(&self, method_id: MethodId) -> Result<MethodIdItem> {
+        let offset = self.inner.method_ids_offset() as u64 + method_id * 4;
+        let max_offset = ((self.inner.method_ids_len() - 1) * 4) as u64;
+        if offset > max_offset {
+            return Err(error::Error::InvalidId("MethodId invalid".to_string()));
+        }
+        MethodIdItem::from_dex(self, offset)
     }
 
     fn get_field(&self, encoded_field: &EncodedField) -> Result<Field> {
@@ -203,7 +241,7 @@ where
     }
 
     fn get_method(&self, encoded_method: &EncodedMethod) -> Result<Method> {
-        unimplemented!()
+        Method::from_dex(self, encoded_method)
     }
 
     fn get_class_data(&self, offset: u32) -> Result<Option<ClassDataItem>> {

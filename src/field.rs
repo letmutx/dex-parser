@@ -15,8 +15,8 @@ pub struct Field {
 }
 
 impl Field {
-    pub(crate) fn from_dex<T: AsRef<[u8]>>(
-        dex: &super::Dex<T>,
+    pub(crate) fn from_dex<S: AsRef<[u8]>>(
+        dex: &super::Dex<S>,
         encoded_field: &EncodedField,
     ) -> super::Result<Self> {
         let field_item = dex.get_field_item(encoded_field.field_id)?;
@@ -44,8 +44,7 @@ impl FieldIdItem {
         offset: u64,
     ) -> super::Result<Self> {
         let source = dex.source.as_ref().as_ref();
-        let endian = dex.get_endian();
-        Ok(source.pread_with(offset as usize, endian)?)
+        Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }
 

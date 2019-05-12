@@ -17,6 +17,8 @@ use crate::field::EncodedField;
 use crate::field::Field;
 use crate::field::FieldId;
 use crate::field::FieldIdItem;
+use crate::method::EncodedMethod;
+use crate::method::Method;
 
 mod cache;
 mod class;
@@ -24,6 +26,7 @@ mod encoded_item;
 mod error;
 mod field;
 mod jtype;
+mod method;
 mod source;
 mod string;
 
@@ -197,6 +200,10 @@ where
 
     fn get_field(&self, encoded_field: &EncodedField) -> Result<Field> {
         Field::from_dex(self, encoded_field)
+    }
+
+    fn get_method(&self, encoded_method: &EncodedMethod) -> Result<Method> {
+        unimplemented!()
     }
 
     fn get_class_data(&self, offset: u32) -> Result<Option<ClassDataItem>> {

@@ -3,6 +3,7 @@ use scroll::{ctx, Pread, Uleb128};
 use crate::cache::Ref;
 use crate::class::ClassId;
 use crate::encoded_item::EncodedItem;
+use crate::encoded_item::EncodedItemArray;
 use crate::jtype::Type;
 use crate::string::JString;
 
@@ -27,6 +28,8 @@ impl Field {
         })
     }
 }
+
+pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
 #[derive(Pread)]
 pub(crate) struct FieldIdItem {

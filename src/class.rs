@@ -3,11 +3,14 @@ use std::clone::Clone;
 use scroll::{Pread, Uleb128};
 
 use crate::cache::Ref;
+use crate::encoded_item::EncodedItem;
 use crate::encoded_item::{EncodedItemArray, EncodedItemArrayCtx};
 use crate::error::Error;
-use crate::field::EncodedField;
+use crate::field::EncodedFieldArray;
 use crate::field::Field;
 use crate::jtype::Type;
+use crate::method::EncodedMethodArray;
+use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
 
@@ -25,8 +28,16 @@ pub struct Class {
     pub(crate) source_file: Option<Ref<JString>>,
     pub(crate) static_fields: Option<Vec<Field>>,
     pub(crate) instance_fields: Option<Vec<Field>>,
-    //    pub(crate) direct_methods: Vec<Method>,
-    //    pub(crate) virtual_methods: Vec<Method>
+    pub(crate) direct_methods: Option<Vec<Method>>,
+    pub(crate) virtual_methods: Option<Vec<Method>>,
+}
+
+fn into_item<T, F, U>(array: Option<EncodedItemArray<T>>, f: F) -> Option<super::Result<Vec<U>>>
+where
+    F: Fn(T) -> super::Result<U>,
+    T: EncodedItem,
+{
+    array.map(|array| array.into_iter().map(f).collect())
 }
 
 impl Class {
@@ -35,35 +46,45 @@ impl Class {
         class_def: &ClassDefItem,
     ) -> super::Result<Self> {
         let data_off = class_def.class_data_off;
-        let into_field = |ef_array: Option<EncodedItemArray<EncodedField>>| {
-            ef_array.map(|ef_array| {
-                let result: super::Result<Vec<Field>> = ef_array
-                    .into_iter()
-                    .map(|encoded_field| dex.get_field(&encoded_field))
-                    .collect();
-                result
-            })
-        };
 
-        let (static_fields, instance_fields) = match dex.get_class_data(data_off)? {
-            Some(c) => {
-                let ClassDataItem {
-                    static_fields,
-                    instance_fields,
-                } = c;
+        let (static_fields, instance_fields, direct_methods, virtual_methods) =
+            match dex.get_class_data(data_off)? {
+                Some(c) => {
+                    let ClassDataItem {
+                        static_fields,
+                        instance_fields,
+                        direct_methods,
+                        virtual_methods,
+                    } = c;
 
-                let static_fields = match into_field(static_fields) {
-                    Some(e) => Some(e?),
-                    None => None,
-                };
-                let instance_fields = match into_field(instance_fields) {
-                    Some(e) => Some(e?),
-                    None => None,
-                };
-                (static_fields, instance_fields)
-            }
-            None => (None, None),
-        };
+                    let ec = |encoded_field| dex.get_field(&encoded_field);
+                    let ef = |encoded_method| dex.get_method(&encoded_method);
+
+                    let static_fields = match into_item(static_fields, ec) {
+                        Some(v) => Some(v?),
+                        None => None,
+                    };
+                    let instance_fields = match into_item(instance_fields, ec) {
+                        Some(v) => Some(v?),
+                        None => None,
+                    };
+                    let direct_methods = match into_item(direct_methods, ef) {
+                        Some(v) => Some(v?),
+                        None => None,
+                    };
+                    let virtual_methods = match into_item(virtual_methods, ef) {
+                        Some(v) => Some(v?),
+                        None => None,
+                    };
+                    (
+                        static_fields,
+                        instance_fields,
+                        direct_methods,
+                        virtual_methods,
+                    )
+                }
+                None => (None, None, None, None),
+            };
         Ok(Class {
             id: class_def.class_idx,
             jtype: dex.get_type(class_def.class_idx)?,
@@ -73,6 +94,8 @@ impl Class {
             source_file: dex.get_source_file(class_def.source_file_idx)?,
             static_fields,
             instance_fields,
+            direct_methods,
+            virtual_methods,
         })
     }
 
@@ -82,8 +105,10 @@ impl Class {
 }
 
 pub(crate) struct ClassDataItem {
-    static_fields: Option<EncodedItemArray<EncodedField>>,
-    instance_fields: Option<EncodedItemArray<EncodedField>>,
+    static_fields: Option<EncodedFieldArray>,
+    instance_fields: Option<EncodedFieldArray>,
+    direct_methods: Option<EncodedMethodArray>,
+    virtual_methods: Option<EncodedMethodArray>,
 }
 
 impl ClassDataItem {
@@ -100,17 +125,32 @@ impl ClassDataItem {
         let instance_field_size = Uleb128::read(source, offset)?;
         let direct_methods_size = Uleb128::read(source, offset)?;
         let virtual_methods_size = Uleb128::read(source, offset)?;
+
         // TODO: may be use a macro here
         let static_fields = if static_field_size > 0 {
             let encoded_array_ctx = EncodedItemArrayCtx::new(dex, static_field_size as usize);
-            Some(source.gread_with::<EncodedItemArray<EncodedField>>(offset, encoded_array_ctx)?)
+            Some(source.gread_with::<EncodedFieldArray>(offset, encoded_array_ctx)?)
         } else {
             None
         };
 
         let instance_fields = if instance_field_size > 0 {
             let encoded_array_ctx = EncodedItemArrayCtx::new(dex, instance_field_size as usize);
-            Some(source.gread_with::<EncodedItemArray<EncodedField>>(offset, encoded_array_ctx)?)
+            Some(source.gread_with::<EncodedFieldArray>(offset, encoded_array_ctx)?)
+        } else {
+            None
+        };
+
+        let direct_methods = if direct_methods_size > 0 {
+            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, direct_methods_size as usize);
+            Some(source.gread_with::<EncodedMethodArray>(offset, encoded_array_ctx)?)
+        } else {
+            None
+        };
+
+        let virtual_methods = if virtual_methods_size > 0 {
+            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, virtual_methods_size as usize);
+            Some(source.gread_with::<EncodedMethodArray>(offset, encoded_array_ctx)?)
         } else {
             None
         };
@@ -118,6 +158,8 @@ impl ClassDataItem {
         Ok(Some(ClassDataItem {
             static_fields,
             instance_fields,
+            direct_methods,
+            virtual_methods,
         }))
     }
 }

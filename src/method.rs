@@ -54,12 +54,14 @@ impl Method {
             let offset = &mut offset;
             let endian = dex.get_endian();
             let len = source.gread_with::<u32>(offset, endian)?;
-            let mut types = Vec::with_capacity(len as usize);
-            for _ in 0..len as usize {
-                let type_id: TypeId = source.gread_with::<u16>(offset, endian)? as u32;
-                types.push(dex.get_type(type_id)?);
-            }
-            Some(types)
+            let mut types: Vec<u16> = Vec::with_capacity(len as usize);
+            source.gread_inout_with(offset, &mut types, endian)?;
+            Some(
+                types
+                    .into_iter()
+                    .map(|s| dex.get_type(s as u32))
+                    .collect::<super::Result<Vec<Type>>>()?,
+            )
         } else {
             None
         };

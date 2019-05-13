@@ -201,12 +201,14 @@ where
         let source = self.source.as_ref().as_ref();
         let endian = self.get_endian();
         let len = source.gread_with::<u32>(&mut offset, endian)?;
-        let mut types = Vec::with_capacity(len as usize);
-        for _ in 0..len as usize {
-            let type_id = source.gread_with::<u16>(&mut offset, endian)? as u32;
-            types.push(Type(type_id, self.string_cache.get(type_id)?));
-        }
-        Ok(Some(types))
+        let mut types: Vec<u16> = Vec::with_capacity(len as usize);
+        source.gread_inout_with(&mut offset, &mut types, endian)?;
+        Ok(Some(
+            types
+                .into_iter()
+                .map(|s| self.get_type(s as u32))
+                .collect::<Result<Vec<Type>>>()?,
+        ))
     }
 
     fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {

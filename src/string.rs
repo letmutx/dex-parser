@@ -8,8 +8,8 @@ use scroll::{self, ctx, Pread, Uleb128};
 use crate::cache::{Cache, Ref};
 use crate::error;
 use crate::error::Error;
-use crate::source::Source;
 use crate::Result;
+use crate::source::Source;
 
 pub type StringId = u32;
 

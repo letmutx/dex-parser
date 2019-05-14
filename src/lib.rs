@@ -13,6 +13,7 @@ use jtype::{Type, TypeId};
 use source::Source;
 use string::{JString, StringCache};
 
+use crate::code::CodeItem;
 use crate::field::EncodedField;
 use crate::field::Field;
 use crate::field::FieldId;
@@ -26,6 +27,7 @@ use crate::method::ProtoIdItem;
 
 mod cache;
 mod class;
+mod code;
 mod encoded_item;
 mod error;
 mod field;
@@ -264,5 +266,10 @@ where
         let endian = self.get_endian();
         ClassDefItemIter::new(source.clone(), defs_offset, defs_len, endian)
             .map(move |class_def_item| Class::from_dex(&self, &class_def_item?))
+    }
+
+    fn get_code_item(&self, code_off: u64) -> Result<CodeItem> {
+        // TODO: move validations here
+        CodeItem::from_dex(self, code_off)
     }
 }

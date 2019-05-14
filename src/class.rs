@@ -3,8 +3,8 @@ use std::clone::Clone;
 use scroll::{Pread, Uleb128};
 
 use crate::cache::Ref;
-use crate::encoded_item::EncodedItem;
 use crate::encoded_item::{EncodedItemArray, EncodedItemArrayCtx};
+use crate::encoded_item::EncodedItem;
 use crate::error::Error;
 use crate::field::EncodedFieldArray;
 use crate::field::Field;

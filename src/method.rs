@@ -3,6 +3,7 @@ use scroll::Pread;
 use scroll::Uleb128;
 
 use crate::cache::Ref;
+use crate::code::CodeItem;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
 use crate::jtype::Type;
@@ -17,7 +18,7 @@ pub struct Method {
     params: Option<Vec<Type>>,
     shorty: Ref<JString>,
     return_type: Type,
-    code_off: u64,
+    code: Option<CodeItem>,
 }
 
 pub type ProtoId = u64;
@@ -65,6 +66,11 @@ impl Method {
         } else {
             None
         };
+        let code = if encoded_method.code_offset > 0 {
+            Some(dex.get_code_item(encoded_method.code_offset)?)
+        } else {
+            None
+        };
         Ok(Self {
             name: dex.get_string(method_item.name_id)?,
             class_id: dex.get_type(method_item.class_id)?,
@@ -72,7 +78,7 @@ impl Method {
             shorty,
             return_type,
             params,
-            code_off: encoded_method.code_offset,
+            code,
         })
     }
 }

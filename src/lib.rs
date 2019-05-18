@@ -40,6 +40,8 @@ const NO_INDEX: u32 = 0xffff_ffff;
 
 type Result<T> = std::result::Result<T, error::Error>;
 
+// ref. https://source.android.com/devices/tech/dalvik/dex-format
+
 #[derive(Debug, Pread)]
 struct Header {
     magic: [u8; 8],
@@ -173,7 +175,7 @@ where
         }
     }
 
-    fn get_string(&self, id: string::StringId) -> Result<Ref<JString>> {
+    pub fn get_string(&self, id: string::StringId) -> Result<Ref<JString>> {
         self.string_cache.get(id)
     }
 
@@ -219,16 +221,16 @@ where
         if offset > max_offset {
             return Err(error::Error::InvalidId("FieldId invalid".to_string()));
         }
-        FieldIdItem::from_dex(self, offset)
+        FieldIdItem::try_from_dex(self, offset)
     }
 
     fn get_proto_item(&self, proto_id: ProtoId) -> Result<ProtoIdItem> {
         let offset = self.inner.proto_ids_offset() as u64 + proto_id * 4;
-        let max_offset = 4 * (self.inner.proto_ids_len() - 1) as u64;
+        let max_offset = u64::from((self.inner.proto_ids_len() - 1) * 4);
         if offset > max_offset {
             return Err(error::Error::InvalidId("FieldId invalid".to_string()));
         }
-        ProtoIdItem::from_dex(self, offset)
+        ProtoIdItem::try_from_dex(self, offset)
     }
 
     fn get_method_item(&self, method_id: MethodId) -> Result<MethodIdItem> {
@@ -237,22 +239,22 @@ where
         if offset > max_offset {
             return Err(error::Error::InvalidId("MethodId invalid".to_string()));
         }
-        MethodIdItem::from_dex(self, offset)
+        MethodIdItem::try_from_dex(self, offset)
     }
 
     fn get_field(&self, encoded_field: &EncodedField) -> Result<Field> {
-        Field::from_dex(self, encoded_field)
+        Field::try_from_dex(self, encoded_field)
     }
 
     fn get_method(&self, encoded_method: &EncodedMethod) -> Result<Method> {
-        Method::from_dex(self, encoded_method)
+        Method::try_from_dex(self, encoded_method)
     }
 
     fn get_class_data(&self, offset: u32) -> Result<Option<ClassDataItem>> {
         if offset == 0 {
             return Ok(None);
         }
-        ClassDataItem::from_dex(self, offset)
+        ClassDataItem::try_from_dex(self, offset)
     }
 
     pub fn get_endian(&self) -> Endian {
@@ -265,11 +267,11 @@ where
         let source = self.source.clone();
         let endian = self.get_endian();
         ClassDefItemIter::new(source.clone(), defs_offset, defs_len, endian)
-            .map(move |class_def_item| Class::from_dex(&self, &class_def_item?))
+            .map(move |class_def_item| Class::try_from_dex(&self, &class_def_item?))
     }
 
     fn get_code_item(&self, code_off: u64) -> Result<CodeItem> {
         // TODO: move validations here
-        CodeItem::from_dex(self, code_off)
+        CodeItem::try_from_dex(self, code_off)
     }
 }

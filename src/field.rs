@@ -15,7 +15,7 @@ pub struct Field {
 }
 
 impl Field {
-    pub(crate) fn from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         encoded_field: &EncodedField,
     ) -> super::Result<Self> {
@@ -39,7 +39,7 @@ pub(crate) struct FieldIdItem {
 }
 
 impl FieldIdItem {
-    pub(crate) fn from_dex<T: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
         offset: u64,
     ) -> super::Result<Self> {

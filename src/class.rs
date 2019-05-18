@@ -3,8 +3,8 @@ use std::clone::Clone;
 use scroll::{Pread, Uleb128};
 
 use crate::cache::Ref;
-use crate::encoded_item::{EncodedItemArray, EncodedItemArrayCtx};
 use crate::encoded_item::EncodedItem;
+use crate::encoded_item::{EncodedItemArray, EncodedItemArrayCtx};
 use crate::error::Error;
 use crate::field::EncodedFieldArray;
 use crate::field::Field;
@@ -41,7 +41,7 @@ where
 }
 
 impl Class {
-    pub(crate) fn from_dex<T: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
         class_def: &ClassDefItem,
     ) -> super::Result<Self> {
@@ -112,7 +112,7 @@ pub(crate) struct ClassDataItem {
 }
 
 impl ClassDataItem {
-    pub(crate) fn from_dex<T: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
         offset: u32,
     ) -> super::Result<Option<Self>> {

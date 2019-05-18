@@ -8,8 +8,8 @@ use scroll::{self, ctx, Pread, Uleb128};
 use crate::cache::{Cache, Ref};
 use crate::error;
 use crate::error::Error;
-use crate::Result;
 use crate::source::Source;
+use crate::Result;
 
 pub type StringId = u32;
 
@@ -82,11 +82,12 @@ where
     }
 
     fn parse(&self, id: StringId) -> Result<JString> {
+        let source = self.source.as_ref().as_ref();
+        let string_data_off: u32 = source.pread(self.offset + id as usize)?;
         self.source
             .as_ref()
             .as_ref()
-            .pread(self.offset as usize + id as usize)
-            .map_err(error::Error::from)
+            .pread(string_data_off as usize)
     }
 
     pub(crate) fn get(&self, id: StringId) -> Result<Ref<JString>> {

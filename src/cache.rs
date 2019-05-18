@@ -6,6 +6,7 @@ use std::rc::Rc;
 
 use lru::LruCache;
 
+#[derive(Debug)]
 pub struct Ref<V>(Rc<V>);
 
 impl<V> Ref<V> {

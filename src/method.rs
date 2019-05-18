@@ -31,7 +31,7 @@ pub(crate) struct ProtoIdItem {
 }
 
 impl ProtoIdItem {
-    pub(crate) fn from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         offset: u64,
     ) -> super::Result<Self> {
@@ -41,7 +41,7 @@ impl ProtoIdItem {
 }
 
 impl Method {
-    pub(crate) fn from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         encoded_method: &EncodedMethod,
     ) -> super::Result<Method> {
@@ -91,7 +91,7 @@ pub(crate) struct MethodIdItem {
 }
 
 impl MethodIdItem {
-    pub(crate) fn from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         offset: u64,
     ) -> super::Result<Self> {

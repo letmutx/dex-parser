@@ -38,7 +38,7 @@ pub struct TryCatchHandlers {
 }
 
 impl CodeItem {
-    pub(crate) fn from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         offset: u64,
     ) -> super::Result<Self> {

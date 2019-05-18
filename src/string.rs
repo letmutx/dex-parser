@@ -83,7 +83,7 @@ where
 
     fn parse(&self, id: StringId) -> Result<JString> {
         let source = self.source.as_ref().as_ref();
-        let string_data_off: u32 = source.pread(self.offset + id as usize)?;
+        let string_data_off: u32 = source.pread((self.offset + id) as usize)?;
         self.source
             .as_ref()
             .as_ref()

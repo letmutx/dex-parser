@@ -6,6 +6,7 @@ use crate::string::JString;
 pub type TypeId = u32;
 
 // TODO: add new function
+#[derive(Debug)]
 pub struct Type(pub(crate) TypeId, pub(crate) Ref<JString>);
 
 impl Clone for Type {

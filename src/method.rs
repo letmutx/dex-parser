@@ -11,6 +11,7 @@ use crate::jtype::TypeId;
 use crate::string::JString;
 use crate::string::StringId;
 
+#[derive(Debug)]
 pub struct Method {
     class_id: Type,
     name: Ref<JString>,
@@ -35,7 +36,7 @@ impl ProtoIdItem {
         dex: &super::Dex<S>,
         offset: u64,
     ) -> super::Result<Self> {
-        let source = dex.source.as_ref().as_ref();
+        let source = dex.source.as_ref();
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }
@@ -45,9 +46,9 @@ impl Method {
         dex: &super::Dex<S>,
         encoded_method: &EncodedMethod,
     ) -> super::Result<Method> {
-        let source = dex.source.as_ref().as_ref();
+        let source = dex.source.as_ref();
         let method_item = dex.get_method_item(encoded_method.method_id)?;
-        let proto_item = dex.get_proto_item(method_item.proto_id)?;
+        let proto_item = dex.get_proto_item(u64::from(method_item.proto_id))?;
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
         let params = if proto_item.params_off != 0 {
@@ -55,14 +56,12 @@ impl Method {
             let offset = &mut offset;
             let endian = dex.get_endian();
             let len = source.gread_with::<u32>(offset, endian)?;
-            let mut types: Vec<u16> = Vec::with_capacity(len as usize);
-            source.gread_inout_with(offset, &mut types, endian)?;
-            Some(
-                types
-                    .into_iter()
-                    .map(|s| dex.get_type(s as u32))
-                    .collect::<super::Result<Vec<Type>>>()?,
-            )
+            let mut types: Vec<Type> = Vec::with_capacity(len as usize);
+            for _ in 0..len {
+                let type_id: u16 = source.gread_with(offset, endian)?;
+                types.push(dex.get_type(u32::from(type_id))?);
+            }
+            Some(types)
         } else {
             None
         };
@@ -73,7 +72,7 @@ impl Method {
         };
         Ok(Self {
             name: dex.get_string(method_item.name_id)?,
-            class_id: dex.get_type(method_item.class_id)?,
+            class_id: dex.get_type(u32::from(method_item.class_id))?,
             access_flags: encoded_method.access_flags,
             shorty,
             return_type,
@@ -83,10 +82,10 @@ impl Method {
     }
 }
 
-#[derive(Pread)]
+#[derive(Pread, Debug)]
 pub(crate) struct MethodIdItem {
-    class_id: TypeId,
-    proto_id: ProtoId,
+    class_id: u16,
+    proto_id: u16,
     name_id: StringId,
 }
 
@@ -95,13 +94,14 @@ impl MethodIdItem {
         dex: &super::Dex<S>,
         offset: u64,
     ) -> super::Result<Self> {
-        let source = dex.source.as_ref().as_ref();
+        let source = dex.source.as_ref();
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }
 
 pub type MethodId = u64;
 
+#[derive(Debug)]
 pub(crate) struct EncodedMethod {
     pub(crate) method_id: MethodId,
     access_flags: u64,

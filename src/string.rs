@@ -64,41 +64,47 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
 pub(crate) struct StringCache<T> {
     source: Source<T>,
     offset: u32,
+    endian: super::Endian,
     len: u32,
-    inner: Cache<StringId, JString>,
+    cache: Cache<StringId, JString>,
 }
 
 impl<T> StringCache<T>
 where
     T: AsRef<[u8]>,
 {
-    pub(crate) fn new(source: Source<T>, offset: u32, len: u32, cache_size: usize) -> Self {
+    pub(crate) fn new(
+        source: Source<T>,
+        endian: super::Endian,
+        offset: u32,
+        len: u32,
+        cache_size: usize,
+    ) -> Self {
         Self {
             source,
             offset,
+            endian,
             len,
-            inner: Cache::new(cache_size),
+            cache: Cache::new(cache_size),
         }
     }
 
     fn parse(&self, id: StringId) -> Result<JString> {
-        let source = self.source.as_ref().as_ref();
-        let string_data_off: u32 = source.pread((self.offset + id) as usize)?;
-        self.source
-            .as_ref()
-            .as_ref()
-            .pread(string_data_off as usize)
+        let source = self.source.as_ref();
+        let offset = self.offset as usize + id as usize * 4;
+        let string_data_off: u32 = source.pread_with(offset, self.endian)?;
+        source.pread(string_data_off as usize)
     }
 
     pub(crate) fn get(&self, id: StringId) -> Result<Ref<JString>> {
-        if id > self.len {
-            return Err(Error::InvalidId("Invalid string id".to_string()));
+        if id >= self.len {
+            return Err(Error::InvalidId(format!("Invalid string id: {}", id)));
         }
-        if let Some(string) = self.inner.get(&id) {
+        if let Some(string) = self.cache.get(&id) {
             Ok(string)
         } else {
-            self.inner.put(id, self.parse(id)?);
-            Ok(self.inner.get(&id).unwrap())
+            self.cache.put(id, self.parse(id)?);
+            Ok(self.cache.get(&id).unwrap())
         }
     }
 }
@@ -108,8 +114,9 @@ impl<T> Clone for StringCache<T> {
         Self {
             source: self.source.clone(),
             offset: self.offset,
+            endian: self.endian,
             len: self.len,
-            inner: self.inner.clone(),
+            cache: self.cache.clone(),
         }
     }
 }

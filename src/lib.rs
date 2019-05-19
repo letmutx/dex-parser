@@ -126,6 +126,14 @@ impl DexInner {
     fn proto_ids_len(&self) -> u32 {
         self.header.proto_ids_size
     }
+
+    fn type_ids_offset(&self) -> u32 {
+        self.header.type_ids_off
+    }
+
+    fn type_ids_len(&self) -> u32 {
+        self.header.type_ids_size
+    }
 }
 
 impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
@@ -146,16 +154,17 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
 
 pub type Endian = scroll::Endian;
 
-impl<T> Dex<T>
-where
-    T: AsRef<[u8]>,
-{
+pub struct DexBuilder;
+
+impl DexBuilder {
     pub fn from_file(file: &File) -> Result<Dex<Mmap>> {
         let map = unsafe { MmapOptions::new().map(&file)? };
         let inner: DexInner = map.pread(0)?;
+        let endian = inner.get_endian();
         let source = Source::new(map);
         let cache = StringCache::new(
             source.clone(),
+            endian,
             inner.strings_offset(),
             inner.strings_len(),
             4096,
@@ -166,7 +175,12 @@ where
             inner,
         })
     }
+}
 
+impl<T> Dex<T>
+where
+    T: AsRef<[u8]>,
+{
     fn get_source_file(&self, file_id: string::StringId) -> Result<Option<Ref<JString>>> {
         if file_id == NO_INDEX {
             Ok(None)
@@ -180,7 +194,20 @@ where
     }
 
     pub fn get_type(&self, type_id: TypeId) -> Result<Type> {
-        self.get_string(type_id).map(|string| Type(type_id, string))
+        let max_offset = self.inner.type_ids_offset() + (self.inner.type_ids_len() - 1) * 4;
+        let offset = self.inner.type_ids_offset() + type_id * 4;
+        if offset > max_offset {
+            return Err(crate::error::Error::InvalidId(format!(
+                "Invalid type id: {}",
+                type_id
+            )));
+        }
+        let string_id = self
+            .source
+            .as_ref()
+            .pread_with(offset as usize, self.get_endian())?;
+        self.get_string(string_id)
+            .map(|string| Type(type_id, string))
     }
 
     pub fn get_class(&self, _class_id: ClassId) -> Result<Class> {
@@ -202,42 +229,52 @@ where
         if offset == 0 {
             return Ok(None);
         }
-        let source = self.source.as_ref().as_ref();
+        let source = self.source.as_ref();
         let endian = self.get_endian();
         let len = source.gread_with::<u32>(&mut offset, endian)?;
-        let mut types: Vec<u16> = Vec::with_capacity(len as usize);
-        source.gread_inout_with(&mut offset, &mut types, endian)?;
-        Ok(Some(
-            types
-                .into_iter()
-                .map(|s| self.get_type(s as u32))
-                .collect::<Result<Vec<Type>>>()?,
-        ))
+        let mut types: Vec<Type> = Vec::with_capacity(len as usize);
+        for _ in 0..len {
+            let type_id = source.gread_with::<u16>(&mut offset, endian)?;
+            types.push(self.get_type(u32::from(type_id))?);
+        }
+        Ok(Some(types))
     }
 
     fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
-        let offset = self.inner.field_ids_offset() as u64 + field_id * 4;
-        let max_offset = ((self.inner.field_ids_len() - 1) * 4) as u64;
+        let offset = u64::from(self.inner.field_ids_offset()) + field_id * 8;
+        let max_offset = self.inner.field_ids_offset() + (self.inner.field_ids_len() - 1) * 8;
+        let max_offset = u64::from(max_offset);
         if offset > max_offset {
-            return Err(error::Error::InvalidId("FieldId invalid".to_string()));
+            return Err(error::Error::InvalidId(format!(
+                "Invalid field id: {}",
+                field_id
+            )));
         }
         FieldIdItem::try_from_dex(self, offset)
     }
 
     fn get_proto_item(&self, proto_id: ProtoId) -> Result<ProtoIdItem> {
-        let offset = self.inner.proto_ids_offset() as u64 + proto_id * 4;
-        let max_offset = u64::from((self.inner.proto_ids_len() - 1) * 4);
+        let offset = u64::from(self.inner.proto_ids_offset()) + proto_id * 12;
+        let max_offset = u64::from(self.inner.proto_ids_offset())
+            + u64::from((self.inner.proto_ids_len() - 1) * 12);
         if offset > max_offset {
-            return Err(error::Error::InvalidId("FieldId invalid".to_string()));
+            return Err(error::Error::InvalidId(format!(
+                "Invalid proto id: {}",
+                proto_id
+            )));
         }
         ProtoIdItem::try_from_dex(self, offset)
     }
 
     fn get_method_item(&self, method_id: MethodId) -> Result<MethodIdItem> {
-        let offset = self.inner.method_ids_offset() as u64 + method_id * 4;
-        let max_offset = ((self.inner.method_ids_len() - 1) * 4) as u64;
+        let offset = u64::from(self.inner.method_ids_offset()) + method_id * 8;
+        let max_offset = self.inner.method_ids_offset() + (self.inner.method_ids_len() - 1) * 8;
+        let max_offset = u64::from(max_offset);
         if offset > max_offset {
-            return Err(error::Error::InvalidId("MethodId invalid".to_string()));
+            return Err(error::Error::InvalidId(format!(
+                "Invalid method id: {}",
+                method_id
+            )));
         }
         MethodIdItem::try_from_dex(self, offset)
     }
@@ -266,7 +303,7 @@ where
         let defs_offset = self.inner.class_defs_offset();
         let source = self.source.clone();
         let endian = self.get_endian();
-        ClassDefItemIter::new(source.clone(), defs_offset, defs_len, endian)
+        ClassDefItemIter::new(source, defs_offset, defs_len, endian)
             .map(move |class_def_item| Class::try_from_dex(&self, &class_def_item?))
     }
 

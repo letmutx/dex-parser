@@ -19,6 +19,7 @@ pub type ClassId = u32;
 pub type AccessFlags = u32;
 
 #[allow(unused)]
+#[derive(Debug)]
 pub struct Class {
     pub(crate) id: ClassId,
     pub(crate) access_flags: AccessFlags,
@@ -120,7 +121,7 @@ impl ClassDataItem {
             return Ok(None);
         }
         let offset = &mut (offset as usize);
-        let source = &dex.source.as_ref().as_ref();
+        let source = dex.source.as_ref();
         let static_field_size = Uleb128::read(source, offset)?;
         let instance_field_size = Uleb128::read(source, offset)?;
         let direct_methods_size = Uleb128::read(source, offset)?;
@@ -203,7 +204,6 @@ impl<T: AsRef<[u8]>> Iterator for ClassDefItemIter<T> {
         }
         let class_item: super::Result<ClassDefItem> = self
             .source
-            .as_ref()
             .as_ref()
             .gread_with(&mut self.offset, self.endian)
             .map_err(Error::from);

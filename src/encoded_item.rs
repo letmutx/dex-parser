@@ -66,6 +66,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub(crate) struct EncodedCatchHandlerList {
     inner: Vec<(usize, EncodedCatchHandler)>,
 }
@@ -76,8 +77,38 @@ impl EncodedCatchHandlerList {
     }
 }
 
-#[derive(Clone, Copy)]
-pub(crate) enum EncodedCatchHandler {
+#[derive(Debug)]
+pub(crate) struct EncodedCatchHandler {
+    pub(crate) handlers: Vec<Handler>,
+}
+
+impl<'a> ctx::TryFromCtx<'a, ()> for EncodedCatchHandler {
+    type Error = crate::error::Error;
+    type Size = usize;
+
+    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
+        let offset = &mut 0;
+        let size = Sleb128::read(source, offset)?;
+        let mut catch_handlers = Vec::with_capacity(size.abs() as usize);
+        for _ in 0..size.abs() {
+            let encoded_type_addr_pair = source.gread(offset)?;
+            catch_handlers.push(Handler::Type(encoded_type_addr_pair));
+        }
+        if size <= 0 {
+            let all_handler_addr = Uleb128::read(source, offset)?;
+            catch_handlers.push(Handler::CatchAll(all_handler_addr as usize));
+        }
+        Ok((
+            Self {
+                handlers: catch_handlers,
+            },
+            *offset,
+        ))
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum Handler {
     CatchAll(usize),
     Type(EncodedTypeAddrPair),
 }
@@ -88,32 +119,23 @@ impl<'a> ctx::TryFromCtx<'a, ()> for EncodedCatchHandlerList {
 
     fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
         let offset = &mut 0;
-        let size = Sleb128::read(source, offset)?;
-        let mut catch_handlers = Vec::with_capacity(size.abs() as usize);
-        for _ in 0..size.abs() {
+        let encoded_handler_size = Uleb128::read(source, offset)?;
+        let mut encoded_catch_handlers = Vec::with_capacity(encoded_handler_size as usize);
+        for _ in 0..encoded_handler_size {
             let off = *offset;
-            let encoded_type_addr_pair = source.gread_with(offset, ())?;
-            catch_handlers.push((off, EncodedCatchHandler::Type(encoded_type_addr_pair)));
+            let encoded_catch_handler = source.gread(offset)?;
+            encoded_catch_handlers.push((off, encoded_catch_handler));
         }
-        if size <= 0 {
-            let off = *offset;
-            let all_handler_addr = Uleb128::read(source, offset)?;
-            catch_handlers.push((
-                off,
-                EncodedCatchHandler::CatchAll(all_handler_addr as usize),
-            ));
-        }
-
         Ok((
             Self {
-                inner: catch_handlers,
+                inner: encoded_catch_handlers,
             },
             *offset,
         ))
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub(crate) struct EncodedTypeAddrPair {
     pub(crate) type_id: TypeId,
     pub(crate) addr: u64,

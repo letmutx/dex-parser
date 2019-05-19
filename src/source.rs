@@ -25,7 +25,7 @@ where
     type Output = u8;
 
     fn index(&self, index: usize) -> &Self::Output {
-        &self.inner.as_ref().as_ref()[index]
+        &self.as_ref()[index]
     }
 }
 
@@ -36,7 +36,7 @@ where
     type Output = [u8];
 
     fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
-        &self.inner.as_ref().as_ref()[index]
+        &self.as_ref()[index]
     }
 }
 
@@ -47,7 +47,7 @@ where
     type Output = [u8];
 
     fn index(&self, index: std::ops::RangeFrom<usize>) -> &Self::Output {
-        &self.inner.as_ref().as_ref()[index]
+        &self.as_ref()[index]
     }
 }
 
@@ -59,8 +59,8 @@ impl<T> Clone for Source<T> {
     }
 }
 
-impl<T: AsRef<[u8]>> AsRef<T> for Source<T> {
-    fn as_ref(&self) -> &T {
-        self.inner.as_ref()
+impl<T: AsRef<[u8]>> AsRef<[u8]> for Source<T> {
+    fn as_ref(&self) -> &[u8] {
+        self.inner.as_ref().as_ref()
     }
 }

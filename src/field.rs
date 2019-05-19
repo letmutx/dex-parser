@@ -7,6 +7,7 @@ use crate::encoded_item::EncodedItemArray;
 use crate::jtype::Type;
 use crate::string::JString;
 
+#[derive(Debug)]
 pub struct Field {
     name: Ref<JString>,
     jtype: Type,
@@ -22,8 +23,8 @@ impl Field {
         let field_item = dex.get_field_item(encoded_field.field_id)?;
         Ok(Self {
             name: dex.get_string(field_item.name_idx)?,
-            jtype: dex.get_type(field_item.type_idx)?,
-            class: field_item.class_idx,
+            jtype: dex.get_type(u32::from(field_item.type_idx))?,
+            class: u32::from(field_item.class_idx),
             access_flags: encoded_field.access_flags,
         })
     }
@@ -31,10 +32,10 @@ impl Field {
 
 pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
-#[derive(Pread)]
+#[derive(Pread, Debug)]
 pub(crate) struct FieldIdItem {
-    class_idx: crate::jtype::TypeId,
-    type_idx: crate::jtype::TypeId,
+    class_idx: u16,
+    type_idx: u16,
     name_idx: crate::string::StringId,
 }
 
@@ -43,7 +44,7 @@ impl FieldIdItem {
         dex: &super::Dex<T>,
         offset: u64,
     ) -> super::Result<Self> {
-        let source = dex.source.as_ref().as_ref();
+        let source = dex.source.as_ref();
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }

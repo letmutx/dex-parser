@@ -41,7 +41,10 @@ impl<K: Hash + Eq, V> Cache<K, V> {
     }
 
     pub(crate) fn get(&self, key: &K) -> Option<Ref<V>> {
-        self.inner.borrow_mut().get(key).map(|v| v.clone())
+        self.inner
+            .borrow_mut()
+            .get(key)
+            .map(std::clone::Clone::clone)
     }
 
     pub(crate) fn put(&self, key: K, value: V) {

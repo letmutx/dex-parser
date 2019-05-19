@@ -11,6 +11,7 @@ use crate::error::Error;
 use crate::source::Source;
 use crate::Result;
 use crate::uint;
+use crate::ubyte;
 
 pub type StringId = uint;
 
@@ -43,7 +44,7 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
     type Error = error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], _: scroll::Endian) -> Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [ubyte], _: scroll::Endian) -> Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let _ = Uleb128::read(source, offset)?;
         let count = source
@@ -72,7 +73,7 @@ pub(crate) struct StringCache<T> {
 
 impl<T> StringCache<T>
 where
-    T: AsRef<[u8]>,
+    T: AsRef<[ubyte]>,
 {
     pub(crate) fn new(
         source: Source<T>,

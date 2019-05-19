@@ -2,6 +2,7 @@ use std::clone::Clone;
 use std::convert::AsRef;
 use std::ops::Index;
 use std::rc::Rc;
+use crate::ubyte;
 
 pub(crate) struct Source<T> {
     inner: Rc<T>,
@@ -9,7 +10,7 @@ pub(crate) struct Source<T> {
 
 impl<T> Source<T>
 where
-    T: AsRef<[u8]>,
+    T: AsRef<[ubyte]>,
 {
     pub(crate) fn new(inner: T) -> Self {
         Self {
@@ -20,9 +21,9 @@ where
 
 impl<T> Index<usize> for Source<T>
 where
-    T: AsRef<[u8]>,
+    T: AsRef<[ubyte]>,
 {
-    type Output = u8;
+    type Output = ubyte;
 
     fn index(&self, index: usize) -> &Self::Output {
         &self.as_ref()[index]
@@ -31,9 +32,9 @@ where
 
 impl<T> Index<std::ops::Range<usize>> for Source<T>
 where
-    T: AsRef<[u8]>,
+    T: AsRef<[ubyte]>,
 {
-    type Output = [u8];
+    type Output = [ubyte];
 
     fn index(&self, index: std::ops::Range<usize>) -> &Self::Output {
         &self.as_ref()[index]
@@ -42,9 +43,9 @@ where
 
 impl<T> Index<std::ops::RangeFrom<usize>> for Source<T>
 where
-    T: AsRef<[u8]>,
+    T: AsRef<[ubyte]>,
 {
-    type Output = [u8];
+    type Output = [ubyte];
 
     fn index(&self, index: std::ops::RangeFrom<usize>) -> &Self::Output {
         &self.as_ref()[index]
@@ -59,8 +60,8 @@ impl<T> Clone for Source<T> {
     }
 }
 
-impl<T: AsRef<[u8]>> AsRef<[u8]> for Source<T> {
-    fn as_ref(&self) -> &[u8] {
+impl<T: AsRef<[ubyte]>> AsRef<[ubyte]> for Source<T> {
+    fn as_ref(&self) -> &[ubyte] {
         self.inner.as_ref().as_ref()
     }
 }

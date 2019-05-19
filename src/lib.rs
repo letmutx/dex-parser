@@ -39,18 +39,21 @@ mod string;
 const NO_INDEX: uint = 0xffff_ffff;
 
 pub type uint = u32;
+pub type ushort = u16;
+pub type ubyte = u8;
+
 type Result<T> = std::result::Result<T, error::Error>;
 
 // ref. https://source.android.com/devices/tech/dalvik/dex-format
 
 #[derive(Debug, Pread)]
 struct Header {
-    magic: [u8; 8],
+    magic: [ubyte; 8],
     checksum: uint,
-    signature: [u8; 20],
+    signature: [ubyte; 20],
     file_size: uint,
     header_size: uint,
-    endian_tag: [u8; 4],
+    endian_tag: [ubyte; 4],
     link_size: uint,
     link_off: uint,
     map_off: uint,
@@ -141,7 +144,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
     type Error = error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [ubyte], _: ()) -> Result<(Self, Self::Size)> {
         let endian_tag = &source[40..44];
         let endian = match (endian_tag[0], endian_tag[1], endian_tag[2], endian_tag[3]) {
             (0x12, 0x34, 0x56, 0x78) => scroll::BE,
@@ -180,7 +183,7 @@ impl DexBuilder {
 
 impl<T> Dex<T>
 where
-    T: AsRef<[u8]>,
+    T: AsRef<[ubyte]>,
 {
     fn get_source_file(&self, file_id: string::StringId) -> Result<Option<Ref<JString>>> {
         if file_id == NO_INDEX {
@@ -235,7 +238,7 @@ where
         let len = source.gread_with::<uint>(&mut offset, endian)?;
         let mut types: Vec<Type> = Vec::with_capacity(len as usize);
         for _ in 0..len {
-            let type_id = source.gread_with::<u16>(&mut offset, endian)?;
+            let type_id = source.gread_with::<ushort>(&mut offset, endian)?;
             types.push(self.get_type(uint::from(type_id))?);
         }
         Ok(Some(types))

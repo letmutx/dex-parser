@@ -7,6 +7,8 @@ use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
 use crate::jtype::Type;
 use crate::string::JString;
+use crate::ushort;
+use crate::ubyte;
 
 #[derive(Debug)]
 pub struct Field {
@@ -17,7 +19,7 @@ pub struct Field {
 }
 
 impl Field {
-    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
         dex: &super::Dex<S>,
         encoded_field: &EncodedField,
     ) -> super::Result<Self> {
@@ -35,13 +37,13 @@ pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
 #[derive(Pread, Debug)]
 pub(crate) struct FieldIdItem {
-    class_idx: u16,
-    type_idx: u16,
+    class_idx: ushort,
+    type_idx: ushort,
     name_idx: crate::string::StringId,
 }
 
 impl FieldIdItem {
-    pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<T: AsRef<[ubyte]>>(
         dex: &super::Dex<T>,
         offset: u64,
     ) -> super::Result<Self> {
@@ -67,7 +69,7 @@ impl<'a> ctx::TryFromCtx<'a, u64> for EncodedField {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], prev_id: u64) -> super::Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [ubyte], prev_id: u64) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let id = Uleb128::read(source, offset)?;
         let access_flags = Uleb128::read(source, offset)?;

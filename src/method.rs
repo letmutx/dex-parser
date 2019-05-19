@@ -11,6 +11,8 @@ use crate::jtype::TypeId;
 use crate::string::JString;
 use crate::string::StringId;
 use crate::uint;
+use crate::ushort;
+use crate::ubyte;
 
 #[derive(Debug)]
 pub struct Method {
@@ -33,7 +35,7 @@ pub(crate) struct ProtoIdItem {
 }
 
 impl ProtoIdItem {
-    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
         dex: &super::Dex<S>,
         offset: u64,
     ) -> super::Result<Self> {
@@ -43,7 +45,7 @@ impl ProtoIdItem {
 }
 
 impl Method {
-    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
         dex: &super::Dex<S>,
         encoded_method: &EncodedMethod,
     ) -> super::Result<Method> {
@@ -59,7 +61,7 @@ impl Method {
             let len = source.gread_with::<uint>(offset, endian)?;
             let mut types: Vec<Type> = Vec::with_capacity(len as usize);
             for _ in 0..len {
-                let type_id: u16 = source.gread_with(offset, endian)?;
+                let type_id: ushort = source.gread_with(offset, endian)?;
                 types.push(dex.get_type(uint::from(type_id))?);
             }
             Some(types)
@@ -85,13 +87,13 @@ impl Method {
 
 #[derive(Pread, Debug)]
 pub(crate) struct MethodIdItem {
-    class_id: u16,
-    proto_id: u16,
+    class_id: ushort,
+    proto_id: ushort,
     name_id: StringId,
 }
 
 impl MethodIdItem {
-    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
         dex: &super::Dex<S>,
         offset: u64,
     ) -> super::Result<Self> {
@@ -121,7 +123,7 @@ impl<'a> ctx::TryFromCtx<'a, u64> for EncodedMethod {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], prev_id: u64) -> super::Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [ubyte], prev_id: u64) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let id = Uleb128::read(source, offset)?;
         let access_flags = Uleb128::read(source, offset)?;

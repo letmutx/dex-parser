@@ -38,9 +38,14 @@ mod string;
 
 const NO_INDEX: uint = 0xffff_ffff;
 
+#[allow(non_camel_case_types)]
 pub type uint = u32;
+#[allow(non_camel_case_types)]
 pub type ushort = u16;
+#[allow(non_camel_case_types)]
 pub type ubyte = u8;
+#[allow(non_camel_case_types)]
+pub type ulong = u64;
 
 type Result<T> = std::result::Result<T, error::Error>;
 
@@ -245,9 +250,9 @@ where
     }
 
     fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
-        let offset = u64::from(self.inner.field_ids_offset()) + field_id * 8;
+        let offset = ulong::from(self.inner.field_ids_offset()) + field_id * 8;
         let max_offset = self.inner.field_ids_offset() + (self.inner.field_ids_len() - 1) * 8;
-        let max_offset = u64::from(max_offset);
+        let max_offset = ulong::from(max_offset);
         if offset > max_offset {
             return Err(error::Error::InvalidId(format!(
                 "Invalid field id: {}",
@@ -258,9 +263,9 @@ where
     }
 
     fn get_proto_item(&self, proto_id: ProtoId) -> Result<ProtoIdItem> {
-        let offset = u64::from(self.inner.proto_ids_offset()) + proto_id * 12;
-        let max_offset = u64::from(self.inner.proto_ids_offset())
-            + u64::from((self.inner.proto_ids_len() - 1) * 12);
+        let offset = ulong::from(self.inner.proto_ids_offset()) + proto_id * 12;
+        let max_offset = ulong::from(self.inner.proto_ids_offset())
+            + ulong::from((self.inner.proto_ids_len() - 1) * 12);
         if offset > max_offset {
             return Err(error::Error::InvalidId(format!(
                 "Invalid proto id: {}",
@@ -271,9 +276,9 @@ where
     }
 
     fn get_method_item(&self, method_id: MethodId) -> Result<MethodIdItem> {
-        let offset = u64::from(self.inner.method_ids_offset()) + method_id * 8;
+        let offset = ulong::from(self.inner.method_ids_offset()) + method_id * 8;
         let max_offset = self.inner.method_ids_offset() + (self.inner.method_ids_len() - 1) * 8;
-        let max_offset = u64::from(max_offset);
+        let max_offset = ulong::from(max_offset);
         if offset > max_offset {
             return Err(error::Error::InvalidId(format!(
                 "Invalid method id: {}",
@@ -311,7 +316,7 @@ where
             .map(move |class_def_item| Class::try_from_dex(&self, &class_def_item?))
     }
 
-    fn get_code_item(&self, code_off: u64) -> Result<CodeItem> {
+    fn get_code_item(&self, code_off: ulong) -> Result<CodeItem> {
         // TODO: move validations here
         CodeItem::try_from_dex(self, code_off)
     }

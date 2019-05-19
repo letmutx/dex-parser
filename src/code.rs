@@ -3,9 +3,10 @@ use scroll::Pread;
 use crate::encoded_item::EncodedCatchHandlerList;
 use crate::encoded_item::Handler;
 use crate::jtype::Type;
-use crate::uint;
-use crate::ushort;
 use crate::ubyte;
+use crate::uint;
+use crate::ulong;
+use crate::ushort;
 
 #[derive(Debug)]
 pub struct CodeItem {
@@ -33,7 +34,7 @@ pub enum ExceptionType {
 #[derive(Debug)]
 pub struct CatchHandler {
     exception: ExceptionType,
-    addr: u64,
+    addr: ulong,
 }
 
 #[derive(Debug)]
@@ -46,7 +47,7 @@ pub struct TryCatchHandlers {
 impl CodeItem {
     pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
         dex: &super::Dex<S>,
-        offset: u64,
+        offset: ulong,
     ) -> super::Result<Self> {
         let source = dex.source.as_ref();
         let mut offset = offset as usize;
@@ -89,7 +90,7 @@ impl CodeItem {
                         .map(|handler| match handler {
                             Handler::CatchAll(addr) => Ok(CatchHandler {
                                 exception: ExceptionType::BaseException,
-                                addr: *addr as u64,
+                                addr: *addr as ulong,
                             }),
                             Handler::Type(type_addr_pair) => Ok(CatchHandler {
                                 exception: ExceptionType::Ty(dex.get_type(type_addr_pair.type_id)?),

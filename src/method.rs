@@ -10,22 +10,23 @@ use crate::jtype::Type;
 use crate::jtype::TypeId;
 use crate::string::JString;
 use crate::string::StringId;
-use crate::uint;
-use crate::ushort;
 use crate::ubyte;
+use crate::uint;
+use crate::ulong;
+use crate::ushort;
 
 #[derive(Debug)]
 pub struct Method {
     class_id: Type,
     name: Ref<JString>,
-    access_flags: u64,
+    access_flags: ulong,
     params: Option<Vec<Type>>,
     shorty: Ref<JString>,
     return_type: Type,
     code: Option<CodeItem>,
 }
 
-pub type ProtoId = u64;
+pub type ProtoId = ulong;
 
 #[derive(Pread)]
 pub(crate) struct ProtoIdItem {
@@ -37,7 +38,7 @@ pub(crate) struct ProtoIdItem {
 impl ProtoIdItem {
     pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
         dex: &super::Dex<S>,
-        offset: u64,
+        offset: ulong,
     ) -> super::Result<Self> {
         let source = dex.source.as_ref();
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
@@ -51,7 +52,7 @@ impl Method {
     ) -> super::Result<Method> {
         let source = dex.source.as_ref();
         let method_item = dex.get_method_item(encoded_method.method_id)?;
-        let proto_item = dex.get_proto_item(u64::from(method_item.proto_id))?;
+        let proto_item = dex.get_proto_item(ulong::from(method_item.proto_id))?;
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
         let params = if proto_item.params_off != 0 {
@@ -95,35 +96,35 @@ pub(crate) struct MethodIdItem {
 impl MethodIdItem {
     pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
         dex: &super::Dex<S>,
-        offset: u64,
+        offset: ulong,
     ) -> super::Result<Self> {
         let source = dex.source.as_ref();
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }
 
-pub type MethodId = u64;
+pub type MethodId = ulong;
 
 #[derive(Debug)]
 pub(crate) struct EncodedMethod {
     pub(crate) method_id: MethodId,
-    access_flags: u64,
-    code_offset: u64,
+    access_flags: ulong,
+    code_offset: ulong,
 }
 
 impl EncodedItem for EncodedMethod {
-    fn get_id(&self) -> u64 {
+    fn get_id(&self) -> ulong {
         self.method_id
     }
 }
 
 pub(crate) type EncodedMethodArray = EncodedItemArray<EncodedMethod>;
 
-impl<'a> ctx::TryFromCtx<'a, u64> for EncodedMethod {
+impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [ubyte], prev_id: u64) -> super::Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [ubyte], prev_id: ulong) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let id = Uleb128::read(source, offset)?;
         let access_flags = Uleb128::read(source, offset)?;

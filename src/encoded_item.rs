@@ -4,11 +4,12 @@ use scroll::Sleb128;
 use scroll::Uleb128;
 
 use crate::jtype::TypeId;
-use crate::uint;
 use crate::ubyte;
+use crate::uint;
+use crate::ulong;
 
 pub(crate) trait EncodedItem {
-    fn get_id(&self) -> u64;
+    fn get_id(&self) -> ulong;
 }
 
 pub(crate) struct EncodedItemArray<T> {
@@ -46,7 +47,7 @@ impl<'a, S: AsRef<[ubyte]>> Clone for EncodedItemArrayCtx<'a, S> {
 impl<'a, S, T: 'a> ctx::TryFromCtx<'a, EncodedItemArrayCtx<'a, S>> for EncodedItemArray<T>
 where
     S: AsRef<[ubyte]>,
-    T: EncodedItem + ctx::TryFromCtx<'a, u64, Size = usize, Error = crate::error::Error>,
+    T: EncodedItem + ctx::TryFromCtx<'a, ulong, Size = usize, Error = crate::error::Error>,
 {
     type Error = crate::error::Error;
     type Size = usize;
@@ -140,7 +141,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for EncodedCatchHandlerList {
 #[derive(Copy, Clone, Debug)]
 pub(crate) struct EncodedTypeAddrPair {
     pub(crate) type_id: TypeId,
-    pub(crate) addr: u64,
+    pub(crate) addr: ulong,
 }
 
 impl<'a> ctx::TryFromCtx<'a, ()> for EncodedTypeAddrPair {

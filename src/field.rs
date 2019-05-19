@@ -1,21 +1,22 @@
 use scroll::{ctx, Pread, Uleb128};
 
 use crate::cache::Ref;
-use crate::uint;
 use crate::class::ClassId;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
 use crate::jtype::Type;
 use crate::string::JString;
-use crate::ushort;
 use crate::ubyte;
+use crate::uint;
+use crate::ulong;
+use crate::ushort;
 
 #[derive(Debug)]
 pub struct Field {
     name: Ref<JString>,
     jtype: Type,
     class: ClassId,
-    access_flags: u64,
+    access_flags: ulong,
 }
 
 impl Field {
@@ -45,31 +46,31 @@ pub(crate) struct FieldIdItem {
 impl FieldIdItem {
     pub(crate) fn try_from_dex<T: AsRef<[ubyte]>>(
         dex: &super::Dex<T>,
-        offset: u64,
+        offset: ulong,
     ) -> super::Result<Self> {
         let source = dex.source.as_ref();
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }
 
-pub type FieldId = u64;
+pub type FieldId = ulong;
 
 pub(crate) struct EncodedField {
     pub(crate) field_id: FieldId,
-    access_flags: u64,
+    access_flags: ulong,
 }
 
 impl EncodedItem for EncodedField {
-    fn get_id(&self) -> u64 {
+    fn get_id(&self) -> ulong {
         self.field_id
     }
 }
 
-impl<'a> ctx::TryFromCtx<'a, u64> for EncodedField {
+impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedField {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [ubyte], prev_id: u64) -> super::Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [ubyte], prev_id: ulong) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let id = Uleb128::read(source, offset)?;
         let access_flags = Uleb128::read(source, offset)?;

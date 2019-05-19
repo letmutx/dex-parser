@@ -13,8 +13,8 @@ use crate::method::EncodedMethodArray;
 use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
-use crate::uint;
 use crate::ubyte;
+use crate::uint;
 
 pub type ClassId = uint;
 // TODO: define an enum for this

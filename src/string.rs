@@ -9,9 +9,9 @@ use crate::cache::{Cache, Ref};
 use crate::error;
 use crate::error::Error;
 use crate::source::Source;
-use crate::Result;
-use crate::uint;
 use crate::ubyte;
+use crate::uint;
+use crate::Result;
 
 pub type StringId = uint;
 

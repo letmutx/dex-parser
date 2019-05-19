@@ -68,11 +68,7 @@ impl Method {
         } else {
             None
         };
-        let code = if encoded_method.code_offset > 0 {
-            Some(dex.get_code_item(encoded_method.code_offset)?)
-        } else {
-            None
-        };
+        let code = dex.get_code_item(encoded_method.code_offset)?;
         Ok(Self {
             name: dex.get_string(method_item.name_id)?,
             class_id: dex.get_type(uint::from(method_item.class_id))?,

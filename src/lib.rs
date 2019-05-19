@@ -316,8 +316,11 @@ where
             .map(move |class_def_item| Class::try_from_dex(&self, &class_def_item?))
     }
 
-    fn get_code_item(&self, code_off: ulong) -> Result<CodeItem> {
-        // TODO: move validations here
-        CodeItem::try_from_dex(self, code_off)
+    fn get_code_item(&self, code_off: ulong) -> Result<Option<CodeItem>> {
+        if code_off == 0 {
+            Ok(None)
+        } else {
+            Ok(Some(CodeItem::try_from_dex(self, code_off)?))
+        }
     }
 }

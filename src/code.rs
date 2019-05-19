@@ -3,11 +3,12 @@ use scroll::Pread;
 use crate::encoded_item::EncodedCatchHandlerList;
 use crate::encoded_item::Handler;
 use crate::jtype::Type;
+use crate::uint;
 
 #[derive(Debug)]
 pub struct CodeItem {
     registers_size: u16,
-    debug_info_off: u32,
+    debug_info_off: uint,
     ins_size: u16,
     outs_size: u16,
     insns: Vec<u16>,
@@ -16,7 +17,7 @@ pub struct CodeItem {
 
 #[derive(Pread, Clone, Copy, Debug)]
 pub(crate) struct TryItem {
-    start_addr: u32,
+    start_addr: uint,
     insn_count: u16,
     handler_off: u16,
 }
@@ -35,7 +36,7 @@ pub struct CatchHandler {
 
 #[derive(Debug)]
 pub struct TryCatchHandlers {
-    start_addr: u32,
+    start_addr: uint,
     insn_count: u16,
     catch_handlers: Vec<CatchHandler>,
 }
@@ -54,7 +55,7 @@ impl CodeItem {
         let outs_size = source.gread_with(offset, endian)?;
         let tries_size: u16 = source.gread_with(offset, endian)?;
         let debug_info_off = source.gread_with(offset, endian)?;
-        let insns_size: u32 = source.gread_with(offset, endian)?;
+        let insns_size: uint = source.gread_with(offset, endian)?;
         let mut insns: Vec<u16> = Vec::with_capacity(insns_size as usize);
         for _ in 0..insns_size {
             insns.push(source.gread_with(offset, endian)?);

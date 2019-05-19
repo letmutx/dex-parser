@@ -36,8 +36,9 @@ mod method;
 mod source;
 mod string;
 
-const NO_INDEX: u32 = 0xffff_ffff;
+const NO_INDEX: uint = 0xffff_ffff;
 
+pub type uint = u32;
 type Result<T> = std::result::Result<T, error::Error>;
 
 // ref. https://source.android.com/devices/tech/dalvik/dex-format
@@ -45,28 +46,28 @@ type Result<T> = std::result::Result<T, error::Error>;
 #[derive(Debug, Pread)]
 struct Header {
     magic: [u8; 8],
-    checksum: u32,
+    checksum: uint,
     signature: [u8; 20],
-    file_size: u32,
-    header_size: u32,
+    file_size: uint,
+    header_size: uint,
     endian_tag: [u8; 4],
-    link_size: u32,
-    link_off: u32,
-    map_off: u32,
-    string_ids_size: u32,
-    string_ids_off: u32,
-    type_ids_size: u32,
-    type_ids_off: u32,
-    proto_ids_size: u32,
-    proto_ids_off: u32,
-    field_ids_size: u32,
-    field_ids_off: u32,
-    method_ids_size: u32,
-    method_ids_off: u32,
-    class_defs_size: u32,
-    class_defs_off: u32,
-    data_size: u32,
-    data_off: u32,
+    link_size: uint,
+    link_off: uint,
+    map_off: uint,
+    string_ids_size: uint,
+    string_ids_off: uint,
+    type_ids_size: uint,
+    type_ids_off: uint,
+    proto_ids_size: uint,
+    proto_ids_off: uint,
+    field_ids_size: uint,
+    field_ids_off: uint,
+    method_ids_size: uint,
+    method_ids_off: uint,
+    class_defs_size: uint,
+    class_defs_off: uint,
+    data_size: uint,
+    data_off: uint,
 }
 
 #[allow(unused)]
@@ -87,51 +88,51 @@ impl DexInner {
         self.endian
     }
 
-    fn strings_offset(&self) -> u32 {
+    fn strings_offset(&self) -> uint {
         self.header.string_ids_off
     }
 
-    fn strings_len(&self) -> u32 {
+    fn strings_len(&self) -> uint {
         self.header.string_ids_size
     }
 
-    fn field_ids_len(&self) -> u32 {
+    fn field_ids_len(&self) -> uint {
         self.header.field_ids_size
     }
 
-    fn field_ids_offset(&self) -> u32 {
+    fn field_ids_offset(&self) -> uint {
         self.header.field_ids_off
     }
 
-    fn class_defs_offset(&self) -> u32 {
+    fn class_defs_offset(&self) -> uint {
         self.header.class_defs_off
     }
 
-    fn class_defs_len(&self) -> u32 {
+    fn class_defs_len(&self) -> uint {
         self.header.class_defs_size
     }
 
-    fn method_ids_offset(&self) -> u32 {
+    fn method_ids_offset(&self) -> uint {
         self.header.method_ids_off
     }
 
-    fn method_ids_len(&self) -> u32 {
+    fn method_ids_len(&self) -> uint {
         self.header.method_ids_size
     }
 
-    fn proto_ids_offset(&self) -> u32 {
+    fn proto_ids_offset(&self) -> uint {
         self.header.proto_ids_off
     }
 
-    fn proto_ids_len(&self) -> u32 {
+    fn proto_ids_len(&self) -> uint {
         self.header.proto_ids_size
     }
 
-    fn type_ids_offset(&self) -> u32 {
+    fn type_ids_offset(&self) -> uint {
         self.header.type_ids_off
     }
 
-    fn type_ids_len(&self) -> u32 {
+    fn type_ids_len(&self) -> uint {
         self.header.type_ids_size
     }
 }
@@ -224,18 +225,18 @@ where
             .next()
     }
 
-    fn get_interfaces(&self, offset: u32) -> Result<Option<Vec<Type>>> {
+    fn get_interfaces(&self, offset: uint) -> Result<Option<Vec<Type>>> {
         let mut offset = offset as usize;
         if offset == 0 {
             return Ok(None);
         }
         let source = self.source.as_ref();
         let endian = self.get_endian();
-        let len = source.gread_with::<u32>(&mut offset, endian)?;
+        let len = source.gread_with::<uint>(&mut offset, endian)?;
         let mut types: Vec<Type> = Vec::with_capacity(len as usize);
         for _ in 0..len {
             let type_id = source.gread_with::<u16>(&mut offset, endian)?;
-            types.push(self.get_type(u32::from(type_id))?);
+            types.push(self.get_type(uint::from(type_id))?);
         }
         Ok(Some(types))
     }
@@ -287,7 +288,7 @@ where
         Method::try_from_dex(self, encoded_method)
     }
 
-    fn get_class_data(&self, offset: u32) -> Result<Option<ClassDataItem>> {
+    fn get_class_data(&self, offset: uint) -> Result<Option<ClassDataItem>> {
         if offset == 0 {
             return Ok(None);
         }

@@ -10,8 +10,9 @@ use crate::error;
 use crate::error::Error;
 use crate::source::Source;
 use crate::Result;
+use crate::uint;
 
-pub type StringId = u32;
+pub type StringId = uint;
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub struct JString {
@@ -63,9 +64,9 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
 
 pub(crate) struct StringCache<T> {
     source: Source<T>,
-    offset: u32,
+    offset: uint,
     endian: super::Endian,
-    len: u32,
+    len: uint,
     cache: Cache<StringId, JString>,
 }
 
@@ -76,8 +77,8 @@ where
     pub(crate) fn new(
         source: Source<T>,
         endian: super::Endian,
-        offset: u32,
-        len: u32,
+        offset: uint,
+        len: uint,
         cache_size: usize,
     ) -> Self {
         Self {
@@ -92,7 +93,7 @@ where
     fn parse(&self, id: StringId) -> Result<JString> {
         let source = self.source.as_ref();
         let offset = self.offset as usize + id as usize * 4;
-        let string_data_off: u32 = source.pread_with(offset, self.endian)?;
+        let string_data_off: uint = source.pread_with(offset, self.endian)?;
         source.pread(string_data_off as usize)
     }
 

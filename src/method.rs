@@ -10,6 +10,7 @@ use crate::jtype::Type;
 use crate::jtype::TypeId;
 use crate::string::JString;
 use crate::string::StringId;
+use crate::uint;
 
 #[derive(Debug)]
 pub struct Method {
@@ -28,7 +29,7 @@ pub type ProtoId = u64;
 pub(crate) struct ProtoIdItem {
     shorty: StringId,
     return_type: TypeId,
-    params_off: u32,
+    params_off: uint,
 }
 
 impl ProtoIdItem {
@@ -55,11 +56,11 @@ impl Method {
             let mut offset = proto_item.params_off as usize;
             let offset = &mut offset;
             let endian = dex.get_endian();
-            let len = source.gread_with::<u32>(offset, endian)?;
+            let len = source.gread_with::<uint>(offset, endian)?;
             let mut types: Vec<Type> = Vec::with_capacity(len as usize);
             for _ in 0..len {
                 let type_id: u16 = source.gread_with(offset, endian)?;
-                types.push(dex.get_type(u32::from(type_id))?);
+                types.push(dex.get_type(uint::from(type_id))?);
             }
             Some(types)
         } else {
@@ -72,7 +73,7 @@ impl Method {
         };
         Ok(Self {
             name: dex.get_string(method_item.name_id)?,
-            class_id: dex.get_type(u32::from(method_item.class_id))?,
+            class_id: dex.get_type(uint::from(method_item.class_id))?,
             access_flags: encoded_method.access_flags,
             shorty,
             return_type,

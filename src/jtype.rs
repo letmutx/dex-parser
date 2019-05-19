@@ -2,8 +2,9 @@ use std::clone::Clone;
 
 use crate::cache::Ref;
 use crate::string::JString;
+use crate::uint;
 
-pub type TypeId = u32;
+pub type TypeId = uint;
 
 // TODO: add new function
 #[derive(Debug)]

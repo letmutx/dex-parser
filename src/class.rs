@@ -13,10 +13,11 @@ use crate::method::EncodedMethodArray;
 use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
+use crate::uint;
 
-pub type ClassId = u32;
+pub type ClassId = uint;
 // TODO: define an enum for this
-pub type AccessFlags = u32;
+pub type AccessFlags = uint;
 
 #[allow(unused)]
 #[derive(Debug)]
@@ -115,7 +116,7 @@ pub(crate) struct ClassDataItem {
 impl ClassDataItem {
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
-        offset: u32,
+        offset: uint,
     ) -> super::Result<Option<Self>> {
         if offset == 0 {
             return Ok(None);
@@ -167,25 +168,25 @@ impl ClassDataItem {
 
 #[derive(Copy, Clone, Debug, Pread)]
 pub(crate) struct ClassDefItem {
-    pub(crate) class_idx: u32,
-    pub(crate) access_flags: u32,
-    pub(crate) superclass_idx: u32,
-    pub(crate) interfaces_off: u32,
-    pub(crate) source_file_idx: u32,
-    pub(crate) annotations_off: u32,
-    pub(crate) class_data_off: u32,
-    pub(crate) static_values_off: u32,
+    pub(crate) class_idx: uint,
+    pub(crate) access_flags: uint,
+    pub(crate) superclass_idx: uint,
+    pub(crate) interfaces_off: uint,
+    pub(crate) source_file_idx: uint,
+    pub(crate) annotations_off: uint,
+    pub(crate) class_data_off: uint,
+    pub(crate) static_values_off: uint,
 }
 
 pub(crate) struct ClassDefItemIter<T> {
     source: Source<T>,
     offset: usize,
-    len: u32,
+    len: uint,
     endian: super::Endian,
 }
 
 impl<T> ClassDefItemIter<T> {
-    pub(crate) fn new(source: Source<T>, offset: u32, len: u32, endian: super::Endian) -> Self {
+    pub(crate) fn new(source: Source<T>, offset: uint, len: uint, endian: super::Endian) -> Self {
         Self {
             source,
             offset: offset as usize,

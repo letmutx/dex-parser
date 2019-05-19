@@ -4,6 +4,7 @@ use scroll::Sleb128;
 use scroll::Uleb128;
 
 use crate::jtype::TypeId;
+use crate::uint;
 
 pub(crate) trait EncodedItem {
     fn get_id(&self) -> u64;
@@ -151,7 +152,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for EncodedTypeAddrPair {
         let addr = Uleb128::read(source, offset)?;
         Ok((
             Self {
-                type_id: type_id as u32,
+                type_id: type_id as uint,
                 addr,
             },
             *offset,

@@ -1,6 +1,7 @@
 use scroll::{ctx, Pread, Uleb128};
 
 use crate::cache::Ref;
+use crate::uint;
 use crate::class::ClassId;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
@@ -23,8 +24,8 @@ impl Field {
         let field_item = dex.get_field_item(encoded_field.field_id)?;
         Ok(Self {
             name: dex.get_string(field_item.name_idx)?,
-            jtype: dex.get_type(u32::from(field_item.type_idx))?,
-            class: u32::from(field_item.class_idx),
+            jtype: dex.get_type(uint::from(field_item.type_idx))?,
+            class: uint::from(field_item.class_idx),
             access_flags: encoded_field.access_flags,
         })
     }

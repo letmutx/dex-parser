@@ -42,6 +42,15 @@ where
     array.map(|array| array.into_iter().map(f).collect())
 }
 
+macro_rules! try_into_item {
+    ($array:expr,$closure:ident) => {
+        match into_item($array, $closure) {
+            Some(v) => Some(v?),
+            None => None,
+        }
+    };
+}
+
 impl Class {
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
@@ -52,37 +61,13 @@ impl Class {
         let (static_fields, instance_fields, direct_methods, virtual_methods) =
             match dex.get_class_data(data_off)? {
                 Some(c) => {
-                    let ClassDataItem {
-                        static_fields,
-                        instance_fields,
-                        direct_methods,
-                        virtual_methods,
-                    } = c;
-
                     let ec = |encoded_field| dex.get_field(&encoded_field);
                     let ef = |encoded_method| dex.get_method(&encoded_method);
-
-                    let static_fields = match into_item(static_fields, ec) {
-                        Some(v) => Some(v?),
-                        None => None,
-                    };
-                    let instance_fields = match into_item(instance_fields, ec) {
-                        Some(v) => Some(v?),
-                        None => None,
-                    };
-                    let direct_methods = match into_item(direct_methods, ef) {
-                        Some(v) => Some(v?),
-                        None => None,
-                    };
-                    let virtual_methods = match into_item(virtual_methods, ef) {
-                        Some(v) => Some(v?),
-                        None => None,
-                    };
                     (
-                        static_fields,
-                        instance_fields,
-                        direct_methods,
-                        virtual_methods,
+                        try_into_item!(c.static_fields, ec),
+                        try_into_item!(c.instance_fields, ec),
+                        try_into_item!(c.direct_methods, ef),
+                        try_into_item!(c.virtual_methods, ef),
                     )
                 }
                 None => (None, None, None, None),
@@ -113,6 +98,17 @@ pub(crate) struct ClassDataItem {
     virtual_methods: Option<EncodedMethodArray>,
 }
 
+macro_rules! encoded_array {
+    ($source:ident,$offset:ident,$dex:ident,$size:expr) => {
+        if $size > 0 {
+            let encoded_array_ctx = EncodedItemArrayCtx::new($dex, $size as usize);
+            Some($source.gread_with($offset, encoded_array_ctx)?)
+        } else {
+            None
+        }
+    };
+}
+
 impl ClassDataItem {
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
@@ -128,40 +124,11 @@ impl ClassDataItem {
         let direct_methods_size = Uleb128::read(source, offset)?;
         let virtual_methods_size = Uleb128::read(source, offset)?;
 
-        // TODO: may be use a macro here
-        let static_fields = if static_field_size > 0 {
-            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, static_field_size as usize);
-            Some(source.gread_with::<EncodedFieldArray>(offset, encoded_array_ctx)?)
-        } else {
-            None
-        };
-
-        let instance_fields = if instance_field_size > 0 {
-            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, instance_field_size as usize);
-            Some(source.gread_with::<EncodedFieldArray>(offset, encoded_array_ctx)?)
-        } else {
-            None
-        };
-
-        let direct_methods = if direct_methods_size > 0 {
-            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, direct_methods_size as usize);
-            Some(source.gread_with::<EncodedMethodArray>(offset, encoded_array_ctx)?)
-        } else {
-            None
-        };
-
-        let virtual_methods = if virtual_methods_size > 0 {
-            let encoded_array_ctx = EncodedItemArrayCtx::new(dex, virtual_methods_size as usize);
-            Some(source.gread_with::<EncodedMethodArray>(offset, encoded_array_ctx)?)
-        } else {
-            None
-        };
-
         Ok(Some(ClassDataItem {
-            static_fields,
-            instance_fields,
-            direct_methods,
-            virtual_methods,
+            static_fields: encoded_array!(source, offset, dex, static_field_size),
+            instance_fields: encoded_array!(source, offset, dex, instance_field_size),
+            direct_methods: encoded_array!(source, offset, dex, direct_methods_size),
+            virtual_methods: encoded_array!(source, offset, dex, virtual_methods_size),
         }))
     }
 }

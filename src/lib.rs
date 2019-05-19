@@ -149,7 +149,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
     type Error = error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [ubyte], _: ()) -> Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size)> {
         let endian_tag = &source[40..44];
         let endian = match (endian_tag[0], endian_tag[1], endian_tag[2], endian_tag[3]) {
             (0x12, 0x34, 0x56, 0x78) => scroll::BE,
@@ -188,7 +188,7 @@ impl DexBuilder {
 
 impl<T> Dex<T>
 where
-    T: AsRef<[ubyte]>,
+    T: AsRef<[u8]>,
 {
     fn get_source_file(&self, file_id: string::StringId) -> Result<Option<Ref<JString>>> {
         if file_id == NO_INDEX {

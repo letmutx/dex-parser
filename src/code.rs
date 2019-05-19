@@ -3,7 +3,6 @@ use scroll::Pread;
 use crate::encoded_item::EncodedCatchHandlerList;
 use crate::encoded_item::Handler;
 use crate::jtype::Type;
-use crate::ubyte;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
@@ -45,7 +44,7 @@ pub struct TryCatchHandlers {
 }
 
 impl CodeItem {
-    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         offset: ulong,
     ) -> super::Result<Self> {

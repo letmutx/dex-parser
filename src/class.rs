@@ -13,7 +13,6 @@ use crate::method::EncodedMethodArray;
 use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
-use crate::ubyte;
 use crate::uint;
 
 pub type ClassId = uint;
@@ -44,7 +43,7 @@ where
 }
 
 impl Class {
-    pub(crate) fn try_from_dex<T: AsRef<[ubyte]>>(
+    pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
         class_def: &ClassDefItem,
     ) -> super::Result<Self> {
@@ -115,7 +114,7 @@ pub(crate) struct ClassDataItem {
 }
 
 impl ClassDataItem {
-    pub(crate) fn try_from_dex<T: AsRef<[ubyte]>>(
+    pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
         offset: uint,
     ) -> super::Result<Option<Self>> {
@@ -197,7 +196,7 @@ impl<T> ClassDefItemIter<T> {
     }
 }
 
-impl<T: AsRef<[ubyte]>> Iterator for ClassDefItemIter<T> {
+impl<T: AsRef<[u8]>> Iterator for ClassDefItemIter<T> {
     type Item = super::Result<ClassDefItem>;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -4,7 +4,6 @@ use scroll::Sleb128;
 use scroll::Uleb128;
 
 use crate::jtype::TypeId;
-use crate::ubyte;
 use crate::uint;
 use crate::ulong;
 
@@ -22,20 +21,20 @@ impl<T: EncodedItem> EncodedItemArray<T> {
     }
 }
 
-pub(crate) struct EncodedItemArrayCtx<'a, S: AsRef<[ubyte]>> {
+pub(crate) struct EncodedItemArrayCtx<'a, S: AsRef<[u8]>> {
     dex: &'a super::Dex<S>,
     len: usize,
 }
 
-impl<'a, S: AsRef<[ubyte]>> EncodedItemArrayCtx<'a, S> {
+impl<'a, S: AsRef<[u8]>> EncodedItemArrayCtx<'a, S> {
     pub(crate) fn new(dex: &'a super::Dex<S>, len: usize) -> Self {
         Self { dex, len }
     }
 }
 
-impl<'a, S: AsRef<[ubyte]>> Copy for EncodedItemArrayCtx<'a, S> {}
+impl<'a, S: AsRef<[u8]>> Copy for EncodedItemArrayCtx<'a, S> {}
 
-impl<'a, S: AsRef<[ubyte]>> Clone for EncodedItemArrayCtx<'a, S> {
+impl<'a, S: AsRef<[u8]>> Clone for EncodedItemArrayCtx<'a, S> {
     fn clone(&self) -> Self {
         Self {
             dex: self.dex,
@@ -46,14 +45,14 @@ impl<'a, S: AsRef<[ubyte]>> Clone for EncodedItemArrayCtx<'a, S> {
 
 impl<'a, S, T: 'a> ctx::TryFromCtx<'a, EncodedItemArrayCtx<'a, S>> for EncodedItemArray<T>
 where
-    S: AsRef<[ubyte]>,
+    S: AsRef<[u8]>,
     T: EncodedItem + ctx::TryFromCtx<'a, ulong, Size = usize, Error = crate::error::Error>,
 {
     type Error = crate::error::Error;
     type Size = usize;
 
     fn try_from_ctx(
-        source: &'a [ubyte],
+        source: &'a [u8],
         ctx: EncodedItemArrayCtx<'a, S>,
     ) -> super::Result<(Self, Self::Size)> {
         let len = ctx.len;
@@ -89,7 +88,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for EncodedCatchHandler {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [ubyte], _: ()) -> Result<(Self, Self::Size), Self::Error> {
+    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
         let offset = &mut 0;
         let size = Sleb128::read(source, offset)?;
         let mut catch_handlers = Vec::with_capacity(size.abs() as usize);
@@ -120,7 +119,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for EncodedCatchHandlerList {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [ubyte], _: ()) -> Result<(Self, Self::Size), Self::Error> {
+    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
         let offset = &mut 0;
         let encoded_handler_size = Uleb128::read(source, offset)?;
         let mut encoded_catch_handlers = Vec::with_capacity(encoded_handler_size as usize);
@@ -148,7 +147,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for EncodedTypeAddrPair {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [ubyte], _: ()) -> Result<(Self, Self::Size), Self::Error> {
+    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
         let offset = &mut 0;
         let type_id = Uleb128::read(source, offset)?;
         let addr = Uleb128::read(source, offset)?;

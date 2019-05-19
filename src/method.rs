@@ -10,7 +10,6 @@ use crate::jtype::Type;
 use crate::jtype::TypeId;
 use crate::string::JString;
 use crate::string::StringId;
-use crate::ubyte;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
@@ -36,7 +35,7 @@ pub(crate) struct ProtoIdItem {
 }
 
 impl ProtoIdItem {
-    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         offset: ulong,
     ) -> super::Result<Self> {
@@ -46,7 +45,7 @@ impl ProtoIdItem {
 }
 
 impl Method {
-    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         encoded_method: &EncodedMethod,
     ) -> super::Result<Method> {
@@ -94,7 +93,7 @@ pub(crate) struct MethodIdItem {
 }
 
 impl MethodIdItem {
-    pub(crate) fn try_from_dex<S: AsRef<[ubyte]>>(
+    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         offset: ulong,
     ) -> super::Result<Self> {
@@ -124,7 +123,7 @@ impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [ubyte], prev_id: ulong) -> super::Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [u8], prev_id: ulong) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let id = Uleb128::read(source, offset)?;
         let access_flags = Uleb128::read(source, offset)?;

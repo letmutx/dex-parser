@@ -3,8 +3,7 @@ use std::clone::Clone;
 use scroll::{Pread, Uleb128};
 
 use crate::cache::Ref;
-use crate::encoded_item::EncodedItem;
-use crate::encoded_item::{EncodedItemArray, EncodedItemArrayCtx};
+use crate::encoded_item::EncodedItemArrayCtx;
 use crate::error::Error;
 use crate::field::EncodedFieldArray;
 use crate::field::Field;
@@ -33,23 +32,6 @@ pub struct Class {
     pub(crate) instance_fields: Option<Vec<Field>>,
     pub(crate) direct_methods: Option<Vec<Method>>,
     pub(crate) virtual_methods: Option<Vec<Method>>,
-}
-
-fn into_item<T, F, U>(array: Option<EncodedItemArray<T>>, f: F) -> Option<super::Result<Vec<U>>>
-where
-    F: Fn(T) -> super::Result<U>,
-    T: EncodedItem,
-{
-    array.map(|array| array.into_iter().map(f).collect())
-}
-
-macro_rules! try_into_item {
-    ($array:expr,$closure:ident) => {
-        match into_item($array, $closure) {
-            Some(v) => Some(v?),
-            None => None,
-        }
-    };
 }
 
 impl Class {
@@ -99,17 +81,6 @@ pub(crate) struct ClassDataItem {
     virtual_methods: Option<EncodedMethodArray>,
 }
 
-macro_rules! encoded_array {
-    ($source:ident,$dex:ident,$offset:ident,$size:expr) => {
-        if $size > 0 {
-            let encoded_array_ctx = EncodedItemArrayCtx::new($dex, $size as usize);
-            Some($source.gread_with($offset, encoded_array_ctx)?)
-        } else {
-            None
-        }
-    };
-}
-
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ClassDataItem
 where
     S: AsRef<[u8]>,
@@ -124,12 +95,15 @@ where
         let direct_methods_size = Uleb128::read(source, offset)?;
         let virtual_methods_size = Uleb128::read(source, offset)?;
 
-        Ok((ClassDataItem {
-            static_fields: encoded_array!(source, dex, offset, static_field_size),
-            instance_fields: encoded_array!(source, dex, offset, instance_field_size),
-            direct_methods: encoded_array!(source, dex, offset, direct_methods_size),
-            virtual_methods: encoded_array!(source, dex, offset, virtual_methods_size),
-        }, *offset))
+        Ok((
+            ClassDataItem {
+                static_fields: encoded_array!(source, dex, offset, static_field_size),
+                instance_fields: encoded_array!(source, dex, offset, instance_field_size),
+                direct_methods: encoded_array!(source, dex, offset, direct_methods_size),
+                virtual_methods: encoded_array!(source, dex, offset, virtual_methods_size),
+            },
+            *offset,
+        ))
     }
 }
 

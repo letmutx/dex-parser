@@ -59,12 +59,13 @@ impl Method {
             let offset = &mut offset;
             let endian = dex.get_endian();
             let len = source.gread_with::<uint>(offset, endian)?;
-            let mut types: Vec<Type> = Vec::with_capacity(len as usize);
-            for _ in 0..len {
-                let type_id: ushort = source.gread_with(offset, endian)?;
-                types.push(dex.get_type(uint::from(type_id))?);
-            }
-            Some(types)
+            let types: Vec<ushort> = read_vec!(source, offset, len, endian);
+            Some(
+                types
+                    .into_iter()
+                    .map(|type_id| dex.get_type(uint::from(type_id)))
+                    .collect::<super::Result<Vec<_>>>()?,
+            )
         } else {
             None
         };

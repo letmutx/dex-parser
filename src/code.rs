@@ -44,13 +44,16 @@ pub struct TryCatchHandlers {
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for CodeItem
-    where
-        S: AsRef<[u8]>,
+where
+    S: AsRef<[u8]>,
 {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> Result<(Self, Self::Size), Self::Error> {
+    fn try_from_ctx(
+        source: &'a [u8],
+        dex: &super::Dex<S>,
+    ) -> Result<(Self, Self::Size), Self::Error> {
         let offset = &mut 0;
         let endian = dex.get_endian();
         let registers_size: ushort = source.gread_with(offset, endian)?;
@@ -59,17 +62,14 @@ impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for CodeItem
         let tries_size: ushort = source.gread_with(offset, endian)?;
         let debug_info_off = source.gread_with(offset, endian)?;
         let insns_size: uint = source.gread_with(offset, endian)?;
-        let mut insns: Vec<ushort> = vec![0; insns_size as usize];
-        source.gread_inout_with(offset, insns.as_mut_slice(), endian)?;
+        let insns: Vec<ushort> = read_vec!(source, offset, insns_size, endian);
         if insns_size % 2 != 0 && tries_size != 0 {
             source.gread_with::<ushort>(offset, endian)?;
         }
         let tries = if tries_size != 0 {
-            let mut tries: Vec<TryItem> = Vec::with_capacity(tries_size as usize);
-            for _ in 0..tries_size {
-                tries.push(source.gread_with(offset, endian)?);
-            }
-            let encoded_catch_handler_list: EncodedCatchHandlerList = source.gread_with(offset, dex)?;
+            let tries: Vec<TryItem> = read_vec!(source, offset, tries_size, endian);
+            let encoded_catch_handler_list: EncodedCatchHandlerList =
+                source.gread_with(offset, dex)?;
             let tries: super::Result<Vec<_>> = tries
                 .into_iter()
                 .map(|c| {
@@ -95,13 +95,16 @@ impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for CodeItem
             None
         };
 
-        Ok((Self {
-            registers_size,
-            debug_info_off,
-            ins_size,
-            outs_size,
-            insns,
-            tries,
-        }, *offset))
+        Ok((
+            Self {
+                registers_size,
+                debug_info_off,
+                ins_size,
+                outs_size,
+                insns,
+                tries,
+            },
+            *offset,
+        ))
     }
 }

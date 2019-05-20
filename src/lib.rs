@@ -25,6 +25,8 @@ use crate::method::MethodIdItem;
 use crate::method::ProtoId;
 use crate::method::ProtoIdItem;
 
+#[macro_use]
+mod utils;
 mod cache;
 mod class;
 mod code;
@@ -241,12 +243,13 @@ where
         let source = self.source.as_ref();
         let endian = self.get_endian();
         let len = source.gread_with::<uint>(&mut offset, endian)?;
-        let mut types: Vec<Type> = Vec::with_capacity(len as usize);
-        for _ in 0..len {
-            let type_id = source.gread_with::<ushort>(&mut offset, endian)?;
-            types.push(self.get_type(uint::from(type_id))?);
-        }
-        Ok(Some(types))
+        let types: Vec<ushort> = read_vec!(source, &mut offset, len, endian);
+        Ok(Some(
+            types
+                .into_iter()
+                .map(|type_id| self.get_type(uint::from(type_id)))
+                .collect::<Result<Vec<_>>>()?,
+        ))
     }
 
     fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
@@ -300,7 +303,9 @@ where
         if offset == 0 {
             return Ok(None);
         }
-        Ok(Some(self.source.as_ref().pread_with(offset as usize, self)?))
+        Ok(Some(
+            self.source.as_ref().pread_with(offset as usize, self)?,
+        ))
     }
 
     pub fn get_endian(&self) -> Endian {

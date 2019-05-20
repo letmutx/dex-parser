@@ -300,7 +300,7 @@ where
         if offset == 0 {
             return Ok(None);
         }
-        ClassDataItem::try_from_dex(self, offset)
+        Ok(Some(self.source.as_ref().pread_with(offset as usize, self)?))
     }
 
     pub fn get_endian(&self) -> Endian {
@@ -318,9 +318,9 @@ where
 
     fn get_code_item(&self, code_off: ulong) -> Result<Option<CodeItem>> {
         if code_off == 0 {
-            Ok(None)
-        } else {
-            Ok(Some(CodeItem::try_from_dex(self, code_off)?))
+            return Ok(None);
         }
+
+        Ok(Some(self.source.pread_with(code_off as usize, self)?))
     }
 }

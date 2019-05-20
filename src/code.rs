@@ -1,11 +1,11 @@
 use scroll::Pread;
 
 use crate::encoded_item::EncodedCatchHandlerList;
-use crate::encoded_item::Handler;
 use crate::jtype::Type;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
+use scroll::ctx;
 
 #[derive(Debug)]
 pub struct CodeItem {
@@ -24,16 +24,16 @@ pub(crate) struct TryItem {
     handler_off: ushort,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ExceptionType {
     BaseException,
     Ty(Type),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CatchHandler {
-    exception: ExceptionType,
-    addr: ulong,
+    pub(crate) exception: ExceptionType,
+    pub(crate) addr: ulong,
 }
 
 #[derive(Debug)]
@@ -43,14 +43,15 @@ pub struct TryCatchHandlers {
     catch_handlers: Vec<CatchHandler>,
 }
 
-impl CodeItem {
-    pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
-        dex: &super::Dex<S>,
-        offset: ulong,
-    ) -> super::Result<Self> {
-        let source = dex.source.as_ref();
-        let mut offset = offset as usize;
-        let offset = &mut offset;
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for CodeItem
+    where
+        S: AsRef<[u8]>,
+{
+    type Error = crate::error::Error;
+    type Size = usize;
+
+    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> Result<(Self, Self::Size), Self::Error> {
+        let offset = &mut 0;
         let endian = dex.get_endian();
         let registers_size: ushort = source.gread_with(offset, endian)?;
         let ins_size = source.gread_with(offset, endian)?;
@@ -58,10 +59,8 @@ impl CodeItem {
         let tries_size: ushort = source.gread_with(offset, endian)?;
         let debug_info_off = source.gread_with(offset, endian)?;
         let insns_size: uint = source.gread_with(offset, endian)?;
-        let mut insns: Vec<ushort> = Vec::with_capacity(insns_size as usize);
-        for _ in 0..insns_size {
-            insns.push(source.gread_with(offset, endian)?);
-        }
+        let mut insns: Vec<ushort> = vec![0; insns_size as usize];
+        source.gread_inout_with(offset, insns.as_mut_slice(), endian)?;
         if insns_size % 2 != 0 && tries_size != 0 {
             source.gread_with::<ushort>(offset, endian)?;
         }
@@ -70,7 +69,7 @@ impl CodeItem {
             for _ in 0..tries_size {
                 tries.push(source.gread_with(offset, endian)?);
             }
-            let encoded_catch_handler_list: EncodedCatchHandlerList = source.gread(offset)?;
+            let encoded_catch_handler_list: EncodedCatchHandlerList = source.gread_with(offset, dex)?;
             let tries: super::Result<Vec<_>> = tries
                 .into_iter()
                 .map(|c| {
@@ -83,25 +82,11 @@ impl CodeItem {
                                 c.handler_off
                             ))
                         })?;
-                    let catch_handlers: super::Result<Vec<_>> = encoded_catch_handler
-                        .handlers
-                        .iter()
-                        .map(|handler| match handler {
-                            Handler::CatchAll(addr) => Ok(CatchHandler {
-                                exception: ExceptionType::BaseException,
-                                addr: *addr as ulong,
-                            }),
-                            Handler::Type(type_addr_pair) => Ok(CatchHandler {
-                                exception: ExceptionType::Ty(dex.get_type(type_addr_pair.type_id)?),
-                                addr: type_addr_pair.addr,
-                            }),
-                        })
-                        .collect();
 
                     Ok(TryCatchHandlers {
                         start_addr: c.start_addr,
                         insn_count: c.insn_count,
-                        catch_handlers: catch_handlers?,
+                        catch_handlers: encoded_catch_handler.handlers.clone(),
                     })
                 })
                 .collect();
@@ -110,13 +95,13 @@ impl CodeItem {
             None
         };
 
-        Ok(Self {
+        Ok((Self {
             registers_size,
             debug_info_off,
             ins_size,
             outs_size,
             insns,
             tries,
-        })
+        }, *offset))
     }
 }

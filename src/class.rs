@@ -14,6 +14,7 @@ use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
 use crate::uint;
+use scroll::ctx;
 
 pub type ClassId = uint;
 // TODO: define an enum for this
@@ -99,7 +100,7 @@ pub(crate) struct ClassDataItem {
 }
 
 macro_rules! encoded_array {
-    ($source:ident,$offset:ident,$dex:ident,$size:expr) => {
+    ($source:ident,$dex:ident,$offset:ident,$size:expr) => {
         if $size > 0 {
             let encoded_array_ctx = EncodedItemArrayCtx::new($dex, $size as usize);
             Some($source.gread_with($offset, encoded_array_ctx)?)
@@ -109,27 +110,26 @@ macro_rules! encoded_array {
     };
 }
 
-impl ClassDataItem {
-    pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
-        dex: &super::Dex<T>,
-        offset: uint,
-    ) -> super::Result<Option<Self>> {
-        if offset == 0 {
-            return Ok(None);
-        }
-        let offset = &mut (offset as usize);
-        let source = dex.source.as_ref();
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ClassDataItem
+where
+    S: AsRef<[u8]>,
+{
+    type Error = crate::error::Error;
+    type Size = usize;
+
+    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
+        let offset = &mut 0;
         let static_field_size = Uleb128::read(source, offset)?;
         let instance_field_size = Uleb128::read(source, offset)?;
         let direct_methods_size = Uleb128::read(source, offset)?;
         let virtual_methods_size = Uleb128::read(source, offset)?;
 
-        Ok(Some(ClassDataItem {
-            static_fields: encoded_array!(source, offset, dex, static_field_size),
-            instance_fields: encoded_array!(source, offset, dex, instance_field_size),
-            direct_methods: encoded_array!(source, offset, dex, direct_methods_size),
-            virtual_methods: encoded_array!(source, offset, dex, virtual_methods_size),
-        }))
+        Ok((ClassDataItem {
+            static_fields: encoded_array!(source, dex, offset, static_field_size),
+            instance_fields: encoded_array!(source, dex, offset, instance_field_size),
+            direct_methods: encoded_array!(source, dex, offset, direct_methods_size),
+            virtual_methods: encoded_array!(source, dex, offset, virtual_methods_size),
+        }, *offset))
     }
 }
 

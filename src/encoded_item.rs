@@ -6,6 +6,8 @@ use scroll::Uleb128;
 use crate::jtype::TypeId;
 use crate::uint;
 use crate::ulong;
+use crate::code::CatchHandler;
+use crate::code::ExceptionType;
 
 pub(crate) trait EncodedItem {
     fn get_id(&self) -> ulong;
@@ -81,51 +83,51 @@ impl EncodedCatchHandlerList {
 
 #[derive(Debug)]
 pub(crate) struct EncodedCatchHandler {
-    pub(crate) handlers: Vec<Handler>,
+    pub(crate) handlers: Vec<CatchHandler>,
 }
 
-impl<'a> ctx::TryFromCtx<'a, ()> for EncodedCatchHandler {
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedCatchHandler where S: AsRef<[u8]> {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
+    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let size = Sleb128::read(source, offset)?;
-        let mut catch_handlers = Vec::with_capacity(size.abs() as usize);
+        let mut handlers = Vec::with_capacity(size.abs() as usize);
         for _ in 0..size.abs() {
-            let encoded_type_addr_pair = source.gread(offset)?;
-            catch_handlers.push(Handler::Type(encoded_type_addr_pair));
+            let type_addr_pair: EncodedTypeAddrPair = source.gread(offset)?;
+            handlers.push(CatchHandler {
+                exception: ExceptionType::Ty(dex.get_type(type_addr_pair.type_id)?),
+                addr: type_addr_pair.addr,
+            });
         }
         if size <= 0 {
             let all_handler_addr = Uleb128::read(source, offset)?;
-            catch_handlers.push(Handler::CatchAll(all_handler_addr as usize));
+            handlers.push(CatchHandler {
+                exception: ExceptionType::BaseException,
+                addr: all_handler_addr as ulong,
+            });
         }
         Ok((
             Self {
-                handlers: catch_handlers,
+                handlers,
             },
             *offset,
         ))
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-pub(crate) enum Handler {
-    CatchAll(usize),
-    Type(EncodedTypeAddrPair),
-}
-
-impl<'a> ctx::TryFromCtx<'a, ()> for EncodedCatchHandlerList {
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedCatchHandlerList where S : AsRef<[u8]> {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
+    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let encoded_handler_size = Uleb128::read(source, offset)?;
         let mut encoded_catch_handlers = Vec::with_capacity(encoded_handler_size as usize);
         for _ in 0..encoded_handler_size {
             let off = *offset;
-            let encoded_catch_handler = source.gread(offset)?;
+            let encoded_catch_handler = source.gread_with(offset, dex)?;
             encoded_catch_handlers.push((off, encoded_catch_handler));
         }
         Ok((

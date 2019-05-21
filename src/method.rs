@@ -13,6 +13,7 @@ use crate::string::StringId;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
+use crate::utils;
 
 #[derive(Debug)]
 pub struct Method {
@@ -55,17 +56,11 @@ impl Method {
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
         let params = if proto_item.params_off != 0 {
-            let mut offset = proto_item.params_off as usize;
-            let offset = &mut offset;
+            let offset = &mut (proto_item.params_off as usize);
             let endian = dex.get_endian();
             let len = source.gread_with::<uint>(offset, endian)?;
-            let types: Vec<ushort> = read_vec!(source, offset, len, endian);
-            Some(
-                types
-                    .into_iter()
-                    .map(|type_id| dex.get_type(uint::from(type_id)))
-                    .collect::<super::Result<Vec<_>>>()?,
-            )
+            let type_ids: Vec<ushort> = gread_vec_with!(source, offset, len, endian);
+            Some(utils::get_types(dex, &type_ids)?)
         } else {
             None
         };

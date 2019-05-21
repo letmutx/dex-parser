@@ -8,6 +8,7 @@ use crate::code::ExceptionType;
 use crate::jtype::TypeId;
 use crate::uint;
 use crate::ulong;
+use crate::ushort;
 
 pub(crate) trait EncodedItem {
     fn get_id(&self) -> ulong;
@@ -71,19 +72,31 @@ where
 }
 
 #[derive(Debug)]
-pub(crate) struct EncodedCatchHandlerList {
+pub(crate) struct EncodedCatchHandlers {
     inner: Vec<(usize, EncodedCatchHandler)>,
 }
 
-impl EncodedCatchHandlerList {
+impl EncodedCatchHandlers {
     pub(crate) fn iter(&self) -> impl Iterator<Item = &(usize, EncodedCatchHandler)> {
         self.inner.iter()
+    }
+
+    pub(crate) fn find(&self, handler_offset: ushort) -> Option<&EncodedCatchHandler> {
+        self.iter()
+            .find(|p| p.0 == handler_offset as usize)
+            .map(|p| &p.1)
     }
 }
 
 #[derive(Debug)]
 pub(crate) struct EncodedCatchHandler {
-    pub(crate) handlers: Vec<CatchHandler>,
+    handlers: Vec<CatchHandler>,
+}
+
+impl EncodedCatchHandler {
+    pub(crate) fn handlers(&self) -> Vec<CatchHandler> {
+        self.handlers.iter().map(|c| c.clone()).collect()
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedCatchHandler
@@ -96,8 +109,9 @@ where
     fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let size = Sleb128::read(source, offset)?;
-        let type_addr_pairs: Vec<EncodedTypeAddrPair> = read_vec!(source, offset, size.abs(), ());
-        let mut handlers = type_addr_pairs
+        let type_addr_pairs: Vec<EncodedTypeAddrPair> =
+            gread_vec_with!(source, offset, size.abs(), ());
+        let mut handlers: Vec<CatchHandler> = type_addr_pairs
             .into_iter()
             .map(|type_addr_pair| {
                 Ok(CatchHandler {
@@ -105,7 +119,7 @@ where
                     addr: type_addr_pair.addr,
                 })
             })
-            .collect::<super::Result<Vec<_>>>()?;
+            .collect::<super::Result<_>>()?;
         if size <= 0 {
             let all_handler_addr = Uleb128::read(source, offset)?;
             handlers.push(CatchHandler {
@@ -117,7 +131,7 @@ where
     }
 }
 
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedCatchHandlerList
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedCatchHandlers
 where
     S: AsRef<[u8]>,
 {
@@ -152,7 +166,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for EncodedTypeAddrPair {
     type Error = crate::error::Error;
     type Size = usize;
 
-    fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size), Self::Error> {
+    fn try_from_ctx(source: &'a [u8], _: ()) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let type_id = Uleb128::read(source, offset)?;
         let addr = Uleb128::read(source, offset)?;

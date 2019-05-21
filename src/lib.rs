@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate scroll_derive;
+#[macro_use]
+extern crate num_derive;
 
 use std::clone::Clone;
 use std::fs::File;
@@ -31,6 +33,7 @@ mod cache;
 mod class;
 mod code;
 mod encoded_item;
+mod encoded_value;
 mod error;
 mod field;
 mod jtype;
@@ -43,11 +46,17 @@ const NO_INDEX: uint = 0xffff_ffff;
 #[allow(non_camel_case_types)]
 pub type uint = u32;
 #[allow(non_camel_case_types)]
+pub type int = i32;
+#[allow(non_camel_case_types)]
 pub type ushort = u16;
+#[allow(non_camel_case_types)]
+pub type short = i16;
 #[allow(non_camel_case_types)]
 pub type ubyte = u8;
 #[allow(non_camel_case_types)]
 pub type ulong = u64;
+#[allow(non_camel_case_types)]
+pub type long = i64;
 
 type Result<T> = std::result::Result<T, error::Error>;
 
@@ -80,7 +89,6 @@ struct Header {
     data_off: uint,
 }
 
-#[allow(unused)]
 pub struct Dex<T> {
     source: Source<T>,
     string_cache: StringCache<T>,
@@ -188,6 +196,8 @@ impl DexBuilder {
     }
 }
 
+pub struct MethodHandleItem;
+
 impl<T> Dex<T>
 where
     T: AsRef<[u8]>,
@@ -221,12 +231,20 @@ where
             .map(|string| Type(type_id, string))
     }
 
-    pub fn get_class(&self, _class_id: ClassId) -> Result<Class> {
-        unimplemented!()
+    pub fn get_class(&self, class_id: ClassId) -> Option<Result<Class>> {
+        // TODO: can do binary search
+        self.classes()
+            .filter(|c| match c {
+                Ok(c) => c.id == class_id,
+                Err(_) => false,
+            })
+            .take(1)
+            .next()
     }
 
     pub fn get_class_by_name(&self, jtype: &Type) -> Option<Result<Class>> {
-        self.classes_iter()
+        // TODO: can do binary search
+        self.classes()
             .filter(|class| match class {
                 Ok(c) => c.get_type() == *jtype,
                 Err(_) => false,
@@ -243,13 +261,8 @@ where
         let source = self.source.as_ref();
         let endian = self.get_endian();
         let len = source.gread_with::<uint>(&mut offset, endian)?;
-        let types: Vec<ushort> = read_vec!(source, &mut offset, len, endian);
-        Ok(Some(
-            types
-                .into_iter()
-                .map(|type_id| self.get_type(uint::from(type_id)))
-                .collect::<Result<Vec<_>>>()?,
-        ))
+        let type_ids: Vec<ushort> = gread_vec_with!(source, &mut offset, len, endian);
+        Ok(Some(utils::get_types(self, &type_ids)?))
     }
 
     fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
@@ -308,11 +321,15 @@ where
         ))
     }
 
+    fn get_method_handle_item(&self, method_handle_id: u32) -> Result<MethodHandleItem> {
+        unimplemented!()
+    }
+
     pub fn get_endian(&self) -> Endian {
         self.inner.get_endian()
     }
 
-    pub fn classes_iter(&self) -> impl Iterator<Item = Result<Class>> + '_ {
+    pub fn classes(&self) -> impl Iterator<Item = Result<Class>> + '_ {
         let defs_len = self.inner.class_defs_len();
         let defs_offset = self.inner.class_defs_offset();
         let source = self.source.clone();

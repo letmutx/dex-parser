@@ -19,7 +19,6 @@ pub type ClassId = uint;
 // TODO: define an enum for this
 pub type AccessFlags = uint;
 
-#[allow(unused)]
 #[derive(Debug)]
 pub struct Class {
     pub(crate) id: ClassId,
@@ -41,20 +40,19 @@ impl Class {
     ) -> super::Result<Self> {
         let data_off = class_def.class_data_off;
 
-        let (static_fields, instance_fields, direct_methods, virtual_methods) =
-            match dex.get_class_data(data_off)? {
-                Some(c) => {
-                    let ec = |encoded_field| dex.get_field(&encoded_field);
-                    let ef = |encoded_method| dex.get_method(&encoded_method);
-                    (
-                        try_into_item!(c.static_fields, ec),
-                        try_into_item!(c.instance_fields, ec),
-                        try_into_item!(c.direct_methods, ef),
-                        try_into_item!(c.virtual_methods, ef),
-                    )
-                }
-                None => (None, None, None, None),
-            };
+        let (static_fields, instance_fields, direct_methods, virtual_methods) = dex
+            .get_class_data(data_off)?
+            .map(|c| {
+                let ef = |encoded_field| dex.get_field(&encoded_field);
+                let em = |encoded_method| dex.get_method(&encoded_method);
+                Ok((
+                    try_from_item!(c.static_fields, ef),
+                    try_from_item!(c.instance_fields, ef),
+                    try_from_item!(c.direct_methods, em),
+                    try_from_item!(c.virtual_methods, em),
+                ))
+            })
+            .unwrap_or_else(|| Ok::<_, crate::error::Error>((None, None, None, None)))?;
         Ok(Class {
             id: class_def.class_idx,
             jtype: dex.get_type(class_def.class_idx)?,

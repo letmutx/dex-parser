@@ -52,7 +52,7 @@ pub type ubyte = u8;
 #[allow(non_camel_case_types)]
 pub type ulong = u64;
 
-type Result<T> = std::result::Result<T, error::Error>;
+pub type Result<T> = std::result::Result<T, error::Error>;
 
 // ref. https://source.android.com/devices/tech/dalvik/dex-format
 
@@ -171,8 +171,8 @@ pub type Endian = scroll::Endian;
 pub struct DexBuilder;
 
 impl DexBuilder {
-    pub fn from_file(file: &File) -> Result<Dex<Mmap>> {
-        let map = unsafe { MmapOptions::new().map(&file)? };
+    pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Dex<Mmap>> {
+        let map = unsafe { MmapOptions::new().map(&File::open(file.as_ref())?)? };
         let inner: DexInner = map.pread(0)?;
         let endian = inner.get_endian();
         let source = Source::new(map);

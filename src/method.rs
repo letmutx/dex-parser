@@ -28,8 +28,8 @@ pub struct Method {
 
 pub type ProtoId = ulong;
 
-#[derive(Pread)]
-pub(crate) struct ProtoIdItem {
+#[derive(Pread, Debug)]
+pub struct ProtoIdItem {
     shorty: StringId,
     return_type: TypeId,
     params_off: uint,
@@ -78,7 +78,7 @@ impl Method {
 }
 
 #[derive(Pread, Debug)]
-pub(crate) struct MethodIdItem {
+pub struct MethodIdItem {
     class_id: ushort,
     proto_id: ushort,
     name_id: StringId,

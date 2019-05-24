@@ -36,7 +36,7 @@ impl Field {
 pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
 #[derive(Pread, Debug)]
-pub(crate) struct FieldIdItem {
+pub struct FieldIdItem {
     class_idx: ushort,
     type_idx: ushort,
     name_idx: crate::string::StringId,

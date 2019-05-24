@@ -1,12 +1,13 @@
+extern crate num_derive;
 #[macro_use]
 extern crate scroll_derive;
-#[macro_use]
-extern crate num_derive;
 
 use std::clone::Clone;
 use std::fs::File;
 
 use memmap::{Mmap, MmapOptions};
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use scroll::{self, ctx, Pread};
 
 use cache::Ref;
@@ -98,6 +99,7 @@ pub struct Dex<T> {
 #[derive(Debug)]
 struct DexInner {
     header: Header,
+    map_list: MapList,
     endian: Endian,
 }
 
@@ -155,6 +157,82 @@ impl DexInner {
     }
 }
 
+#[derive(Debug)]
+struct MapList {
+    map_items: Vec<MapItem>,
+}
+
+#[derive(FromPrimitive, Debug)]
+pub enum ItemType {
+    Header = 0x0,
+    StringIdItem = 0x1,
+    TypeIdItem = 0x2,
+    ProtoIdItem = 0x3,
+    FieldIdItem = 0x4,
+    MethodIdItem = 0x5,
+    ClassDefItem = 0x6,
+    CallSiteIdItem = 0x7,
+    MethodHandleItem = 0x8,
+    MapList = 0x1000,
+    TypeList = 0x1001,
+    AnnotationSetRefList = 0x1002,
+    AnnotationSetItem = 0x1003,
+    ClassDataItem = 0x2000,
+    CodeItem = 0x2001,
+    StringDataItem = 0x2002,
+    DebugInfoItem = 0x2003,
+    AnnotationItem = 0x2004,
+    EncodedArrayItem = 0x2005,
+    AnnotationsDirectoryItem = 0x2006,
+}
+
+#[derive(Debug)]
+struct MapItem {
+    item_type: ItemType,
+    size: uint,
+    offset: uint,
+}
+
+impl<'a> ctx::TryFromCtx<'a, Endian> for MapItem {
+    type Error = error::Error;
+    type Size = usize;
+
+    fn try_from_ctx(source: &'a [u8], endian: Endian) -> Result<(Self, Self::Size)> {
+        let offset = &mut 0;
+        let item_type: ushort = source.gread_with(offset, endian)?;
+        let item_type = ItemType::from_u16(item_type).ok_or(crate::error::Error::InvalidId(
+            format!("Invalid item type in map_list: {}", item_type),
+        ))?;
+        let _: ushort = source.gread_with(offset, endian)?;
+        let size: uint = source.gread_with(offset, endian)?;
+        let item_offset: uint = source.gread_with(offset, endian)?;
+        Ok((
+            Self {
+                item_type,
+                size,
+                offset: item_offset,
+            },
+            *offset,
+        ))
+    }
+}
+
+impl<'a> ctx::TryFromCtx<'a, Endian> for MapList {
+    type Error = error::Error;
+    type Size = usize;
+
+    fn try_from_ctx(source: &'a [u8], endian: Endian) -> Result<(Self, Self::Size)> {
+        let offset = &mut 0;
+        let size: uint = source.gread_with(offset, endian)?;
+        Ok((
+            Self {
+                map_items: gread_vec_with!(source, &mut 0, size, endian),
+            },
+            *offset,
+        ))
+    }
+}
+
 impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
     type Error = error::Error;
     type Size = usize;
@@ -167,7 +245,15 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
             _ => return Err(error::Error::MalFormed("Bad endian tag".to_string())),
         };
         let header = source.pread_with::<Header>(0, endian)?;
-        Ok((DexInner { header, endian }, 0))
+        let map_list = source.pread_with(header.map_off as usize, endian)?;
+        Ok((
+            DexInner {
+                header,
+                map_list,
+                endian,
+            },
+            0,
+        ))
     }
 }
 
@@ -196,6 +282,7 @@ impl DexBuilder {
     }
 }
 
+#[derive(Debug)]
 pub struct MethodHandleItem;
 
 impl<T> Dex<T>
@@ -321,7 +408,7 @@ where
         ))
     }
 
-    fn get_method_handle_item(&self, method_handle_id: u32) -> Result<MethodHandleItem> {
+    fn get_method_handle_item(&self, _method_handle_id: u32) -> Result<MethodHandleItem> {
         unimplemented!()
     }
 

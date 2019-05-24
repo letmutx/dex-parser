@@ -10,7 +10,7 @@ use lru::LruCache;
 pub struct Ref<V>(Rc<V>);
 
 impl<V> Ref<V> {
-    pub fn new(value: V) -> Self {
+    pub(crate) fn new(value: V) -> Self {
         Ref(Rc::new(value))
     }
 }

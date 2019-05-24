@@ -121,3 +121,32 @@ impl<T> Clone for StringCache<T> {
         }
     }
 }
+
+pub struct Strings<T> {
+    cache: StringCache<T>,
+    current: usize,
+    len: usize,
+}
+
+impl<T: AsRef<[u8]>> Strings<T> {
+    pub(crate) fn new(cache: StringCache<T>, len: usize) -> Self {
+        Self {
+            cache,
+            current: 0,
+            len,
+        }
+    }
+}
+
+impl<T: AsRef<[u8]>> Iterator for Strings<T> {
+    type Item = super::Result<Ref<JString>>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.len {
+            return None;
+        }
+        let next = self.cache.get(self.current as u32);
+        self.current += 1;
+        Some(next)
+    }
+}

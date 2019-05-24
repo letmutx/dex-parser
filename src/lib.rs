@@ -3,12 +3,14 @@ extern crate scroll_derive;
 
 use std::clone::Clone;
 use std::fs::File;
+use std::path::Path;
 
 use memmap::{Mmap, MmapOptions};
 use scroll::{self, ctx, Pread};
 
 use cache::Ref;
 use class::{Class, ClassDataItem, ClassDefItemIter, ClassId};
+pub use error::Error;
 use jtype::{Type, TypeId};
 use source::Source;
 use string::{JString, StringCache};
@@ -24,6 +26,7 @@ use crate::method::MethodId;
 use crate::method::MethodIdItem;
 use crate::method::ProtoId;
 use crate::method::ProtoIdItem;
+use crate::string::Strings;
 
 #[macro_use]
 mod utils;
@@ -198,6 +201,10 @@ where
         } else {
             Ok(Some(self.get_string(file_id)?))
         }
+    }
+
+    pub fn strings(&self) -> impl Iterator<Item = Result<Ref<JString>>> {
+        Strings::new(self.string_cache.clone(), self.inner.strings_len() as usize)
     }
 
     pub fn get_string(&self, id: string::StringId) -> Result<Ref<JString>> {

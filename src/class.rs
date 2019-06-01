@@ -1,9 +1,11 @@
 use std::clone::Clone;
 
+use scroll::ctx;
 use scroll::{Pread, Uleb128};
 
 use crate::cache::Ref;
 use crate::encoded_item::EncodedItemArrayCtx;
+use crate::encoded_value::EncodedArray;
 use crate::error::Error;
 use crate::field::EncodedFieldArray;
 use crate::field::Field;
@@ -13,7 +15,6 @@ use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
 use crate::uint;
-use scroll::ctx;
 
 pub type ClassId = uint;
 // TODO: define an enum for this
@@ -31,6 +32,7 @@ pub struct Class {
     pub(crate) instance_fields: Option<Vec<Field>>,
     pub(crate) direct_methods: Option<Vec<Method>>,
     pub(crate) virtual_methods: Option<Vec<Method>>,
+    pub(crate) static_values: Option<EncodedArray>,
 }
 
 impl Class {
@@ -52,7 +54,17 @@ impl Class {
                     try_from_item!(c.virtual_methods, em),
                 ))
             })
-            .unwrap_or_else(|| Ok::<_, crate::error::Error>((None, None, None, None)))?;
+            .unwrap_or_else(|| Ok::<_, Error>((None, None, None, None)))?;
+
+
+        let static_values_off = class_def.static_values_off;
+        let static_values = if static_values_off != 0 {
+            let source = dex.source.as_ref();
+            Some(source.pread_with(static_values_off as usize, dex)?)
+        } else {
+            None
+        };
+
         Ok(Class {
             id: class_def.class_idx,
             jtype: dex.get_type(class_def.class_idx)?,
@@ -64,6 +76,7 @@ impl Class {
             instance_fields,
             direct_methods,
             virtual_methods,
+            static_values,
         })
     }
 
@@ -83,7 +96,7 @@ impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ClassDataItem
 where
     S: AsRef<[u8]>,
 {
-    type Error = crate::error::Error;
+    type Error = Error;
     type Size = usize;
 
     fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {

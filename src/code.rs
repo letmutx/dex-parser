@@ -1,3 +1,4 @@
+use scroll::ctx;
 use scroll::Pread;
 
 use crate::encoded_item::EncodedCatchHandlers;
@@ -6,7 +7,6 @@ use crate::jtype::Type;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
-use scroll::ctx;
 
 #[derive(Debug)]
 pub struct CodeItem {
@@ -62,7 +62,7 @@ where
     ) -> Result<(Self, Self::Size), Self::Error> {
         let offset = &mut 0;
         let endian = dex.get_endian();
-        let tries: Vec<TryItem> = gread_vec_with!(source, offset, tries_size, endian);
+        let tries: Vec<TryItem> = try_gread_vec_with!(source, offset, tries_size, endian);
         let encoded_catch_handlers: EncodedCatchHandlers = source.gread_with(offset, dex)?;
         let tries: super::Result<Vec<_>> = tries
             .into_iter()
@@ -101,7 +101,7 @@ where
         let tries_size: ushort = source.gread_with(offset, endian)?;
         let debug_info_off = source.gread_with(offset, endian)?;
         let insns_size: uint = source.gread_with(offset, endian)?;
-        let insns: Vec<ushort> = gread_vec_with!(source, offset, insns_size, endian);
+        let insns: Vec<ushort> = try_gread_vec_with!(source, offset, insns_size, endian);
         if insns_size % 2 != 0 && tries_size != 0 {
             source.gread_with::<ushort>(offset, endian)?;
         }

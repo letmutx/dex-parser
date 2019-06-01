@@ -1,27 +1,27 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use scroll::ctx;
+use scroll::LE;
 use scroll::Pread;
 use scroll::Uleb128;
-use scroll::LE;
 
+use crate::annotation::EncodedAnnotation;
 use crate::cache::Ref;
 use crate::error::Error;
 use crate::field::FieldIdItem;
 use crate::int;
 use crate::jtype::Type;
-use crate::jtype::TypeId;
 use crate::long;
+use crate::method::MethodHandleItem;
 use crate::method::MethodIdItem;
 use crate::method::ProtoIdItem;
+use crate::Result;
 use crate::short;
 use crate::string::JString;
-use crate::string::StringId;
 use crate::ubyte;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
-use crate::MethodHandleItem;
 
 #[derive(Debug)]
 pub enum EncodedValue {
@@ -38,7 +38,6 @@ pub enum EncodedValue {
     String(Ref<JString>),
     Field(FieldIdItem),
     Method(MethodIdItem),
-    // TODO: from here..
     Annotation(EncodedAnnotation),
     Array(Vec<EncodedValue>),
     Enum(FieldIdItem),
@@ -46,7 +45,7 @@ pub enum EncodedValue {
     Boolean(bool),
 }
 
-#[derive(FromPrimitive)]
+#[derive(FromPrimitive, Debug)]
 enum ValueType {
     Byte = 0x00,
     Short = 0x02,
@@ -68,6 +67,18 @@ enum ValueType {
     Boolean = 0x1f,
 }
 
+macro_rules! try_zero_extended_gread {
+    ($source:expr,$offset:expr,$value_arg:expr,$size:expr) => {{
+        let mut bytes = [0x0; $size];
+        for (i, value) in $source[1..1+$value_arg].iter().enumerate() {
+            bytes[i] = *value;
+        }
+        let value = bytes.pread_with(0, LE)?;
+        *$offset += 1 + $value_arg;
+        value
+    }};
+}
+
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedValue
 where
     S: AsRef<[u8]>,
@@ -78,85 +89,85 @@ where
     fn try_from_ctx(
         source: &'a [u8],
         dex: &super::Dex<S>,
-    ) -> Result<(Self, Self::Size), Self::Error> {
-        let header: ubyte = source.pread(0)?;
+    ) -> Result<(Self, Self::Size)> {
         let offset = &mut 0;
+        let header: ubyte = source.gread(offset)?;
         let value_arg = (header >> 5) as usize;
         let value_type = 0b00011111 & header;
-        let source = &source[1..1 + value_arg];
-        let value = match ValueType::from_u8(value_type).expect("Invalid value type") {
-            // TODO: replace debug_assert with errors
+        let value_type = ValueType::from_u8(value_type)
+            .ok_or_else(|| Error::InvalidId(format!("Invalid value type {}", value_type)))?;
+        let value = match value_type {
             ValueType::Byte => {
                 debug_assert_eq!(value_arg, 0);
-                EncodedValue::Byte(source.gread(offset)?)
+                EncodedValue::Byte(try_zero_extended_gread!(source, offset, value_arg, 1))
             }
             ValueType::Short => {
                 debug_assert!(value_arg < 2);
-                EncodedValue::Short(source.gread_with(offset, LE)?)
+                EncodedValue::Short(try_zero_extended_gread!(source, offset, value_arg, 2))
             }
             ValueType::Char => {
                 debug_assert!(value_arg < 2);
-                EncodedValue::Char(source.gread_with(offset, LE)?)
+                EncodedValue::Char(try_zero_extended_gread!(source, offset, value_arg, 2))
             }
             ValueType::Int => {
                 debug_assert!(value_arg < 4);
-                EncodedValue::Int(source.gread_with(offset, LE)?)
+                EncodedValue::Int(try_zero_extended_gread!(source, offset, value_arg, 4))
             }
             ValueType::Long => {
                 debug_assert!(value_arg < 8);
-                EncodedValue::Long(source.gread_with(offset, LE)?)
+                EncodedValue::Long(try_zero_extended_gread!(source, offset, value_arg, 8))
             }
             ValueType::Float => {
                 debug_assert!(value_arg < 4);
-                EncodedValue::Float(source.gread_with(offset, LE)?)
+                EncodedValue::Float(try_zero_extended_gread!(source, offset, value_arg, 4))
             }
             ValueType::Double => {
                 debug_assert!(value_arg < 8);
-                EncodedValue::Double(source.gread_with(offset, LE)?)
+                EncodedValue::Double(try_zero_extended_gread!(source, offset, value_arg, 8))
             }
             ValueType::MethodType => {
                 debug_assert!(value_arg < 4);
-                let proto_id: uint = source.gread_with(offset, LE)?;
+                let proto_id: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::MethodType(dex.get_proto_item(u64::from(proto_id))?)
             }
             ValueType::MethodHandle => {
                 debug_assert!(value_arg < 4);
-                let index = source.gread_with::<uint>(offset, LE)?;
+                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::MethodHandle(dex.get_method_handle_item(index)?)
             }
             ValueType::String => {
                 debug_assert!(value_arg < 4);
-                let index: uint = source.gread_with(offset, LE)?;
+                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::String(dex.get_string(index)?)
             }
             ValueType::Type => {
                 debug_assert!(value_arg < 4);
-                let index: uint = source.gread_with(offset, LE)?;
+                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Type(dex.get_type(index)?)
             }
             ValueType::Field => {
                 debug_assert!(value_arg < 4);
-                let index: uint = source.gread_with(offset, LE)?;
+                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Field(dex.get_field_item(ulong::from(index))?)
             }
             ValueType::Method => {
                 debug_assert!(value_arg < 4);
-                let index = source.gread_with(offset, LE)?;
+                let index = try_zero_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Method(dex.get_method_item(index)?)
             }
             ValueType::Enum => {
                 debug_assert!(value_arg < 4);
-                let index: uint = source.gread_with(offset, LE)?;
+                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Enum(dex.get_field_item(ulong::from(index))?)
             }
             ValueType::Array => {
                 debug_assert!(value_arg == 0);
-                EncodedValue::Array(source.gread_with::<EncodedArray>(offset, dex)?.into_inner())
+                let encoded_array: EncodedArray = source[1..].gread_with(offset, dex)?;
+                EncodedValue::Array(encoded_array.into_inner())
             }
             ValueType::Annotation => {
                 debug_assert!(value_arg == 0);
-                let result = EncodedValue::Annotation(source.gread_with(offset, dex)?);
-                result
+                EncodedValue::Annotation(source.gread_with(offset, dex)?)
             }
             ValueType::Null => {
                 debug_assert!(value_arg == 0);
@@ -167,7 +178,7 @@ where
                 EncodedValue::Boolean(value_arg == 1)
             }
         };
-        Ok((value, *offset + 1))
+        Ok((value, *offset))
     }
 }
 
@@ -177,7 +188,7 @@ pub struct EncodedArray {
 }
 
 impl EncodedArray {
-    fn into_inner(self) -> Vec<EncodedValue> {
+    pub(crate) fn into_inner(self) -> Vec<EncodedValue> {
         self.values
     }
 }
@@ -192,52 +203,11 @@ where
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let size = Uleb128::read(source, offset)?;
-        let values = gread_vec_with!(source, offset, size, ctx);
+        // TODO: find out why try_gread_vec_with! doesn't work here: fails in scroll
+        let mut values = Vec::with_capacity(size as usize);
+        for _ in 0..size {
+            values.push(source.gread_with(offset, ctx)?);
+        }
         Ok((Self { values }, *offset))
-    }
-}
-
-#[derive(Debug)]
-pub struct EncodedAnnotation {
-    type_idx: TypeId,
-    elements: Vec<AnnotationElement>,
-}
-
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedAnnotation
-where
-    S: AsRef<[u8]>,
-{
-    type Error = Error;
-    type Size = usize;
-
-    fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
-        let offset = &mut 0;
-        let type_idx = Uleb128::read(source, offset)?;
-        let type_idx = type_idx as u32;
-        let size = Uleb128::read(source, offset)?;
-        let elements = gread_vec_with!(source, offset, size, ctx);
-        Ok((Self { type_idx, elements }, *offset))
-    }
-}
-
-#[derive(Debug)]
-pub struct AnnotationElement {
-    name_idx: StringId,
-    value: EncodedValue,
-}
-
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationElement
-where
-    S: AsRef<[u8]>,
-{
-    type Error = Error;
-    type Size = usize;
-
-    fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
-        let offset = &mut 0;
-        let name_idx = Uleb128::read(source, offset)?;
-        let name_idx = name_idx as u32;
-        let value = source.gread_with(offset, ctx)?;
-        Ok((Self { name_idx, value }, *offset))
     }
 }

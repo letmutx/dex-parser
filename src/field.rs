@@ -4,8 +4,10 @@ use crate::cache::Ref;
 use crate::class::ClassId;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
+use crate::error::Error;
 use crate::jtype::Type;
 use crate::string::JString;
+use crate::string::StringId;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
@@ -39,7 +41,7 @@ pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 pub struct FieldIdItem {
     class_idx: ushort,
     type_idx: ushort,
-    name_idx: crate::string::StringId,
+    name_idx: StringId,
 }
 
 impl FieldIdItem {
@@ -66,7 +68,7 @@ impl EncodedItem for EncodedField {
 }
 
 impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedField {
-    type Error = crate::error::Error;
+    type Error = Error;
     type Size = usize;
 
     fn try_from_ctx(source: &'a [u8], prev_id: ulong) -> super::Result<(Self, Self::Size)> {

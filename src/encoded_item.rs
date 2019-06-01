@@ -5,6 +5,7 @@ use scroll::Uleb128;
 
 use crate::code::CatchHandler;
 use crate::code::ExceptionType;
+use crate::error::Error;
 use crate::jtype::TypeId;
 use crate::uint;
 use crate::ulong;
@@ -49,9 +50,9 @@ impl<'a, S: AsRef<[u8]>> Clone for EncodedItemArrayCtx<'a, S> {
 impl<'a, S, T: 'a> ctx::TryFromCtx<'a, EncodedItemArrayCtx<'a, S>> for EncodedItemArray<T>
 where
     S: AsRef<[u8]>,
-    T: EncodedItem + ctx::TryFromCtx<'a, ulong, Size = usize, Error = crate::error::Error>,
+    T: EncodedItem + ctx::TryFromCtx<'a, ulong, Size = usize, Error = Error>,
 {
-    type Error = crate::error::Error;
+    type Error = Error;
     type Size = usize;
 
     fn try_from_ctx(
@@ -110,7 +111,7 @@ where
         let offset = &mut 0;
         let size = Sleb128::read(source, offset)?;
         let type_addr_pairs: Vec<EncodedTypeAddrPair> =
-            gread_vec_with!(source, offset, size.abs(), ());
+            try_gread_vec_with!(source, offset, size.abs(), ());
         let mut handlers: Vec<CatchHandler> = type_addr_pairs
             .into_iter()
             .map(|type_addr_pair| {

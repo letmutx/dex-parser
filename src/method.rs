@@ -1,3 +1,5 @@
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
@@ -6,6 +8,8 @@ use crate::cache::Ref;
 use crate::code::CodeItem;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
+use crate::error::Error;
+use crate::field::FieldId;
 use crate::jtype::Type;
 use crate::jtype::TypeId;
 use crate::string::JString;
@@ -59,7 +63,7 @@ impl Method {
             let offset = &mut (proto_item.params_off as usize);
             let endian = dex.get_endian();
             let len = source.gread_with::<uint>(offset, endian)?;
-            let type_ids: Vec<ushort> = gread_vec_with!(source, offset, len, endian);
+            let type_ids: Vec<ushort> = try_gread_vec_with!(source, offset, len, endian);
             Some(utils::get_types(dex, &type_ids)?)
         } else {
             None
@@ -112,7 +116,7 @@ impl EncodedItem for EncodedMethod {
 pub(crate) type EncodedMethodArray = EncodedItemArray<EncodedMethod>;
 
 impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
-    type Error = crate::error::Error;
+    type Error = Error;
     type Size = usize;
 
     fn try_from_ctx(source: &'a [u8], prev_id: ulong) -> super::Result<(Self, Self::Size)> {
@@ -128,5 +132,55 @@ impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
             },
             *offset,
         ))
+    }
+}
+
+#[derive(FromPrimitive, Debug)]
+pub enum MethodHandleType {
+    StaticPut = 0x00,
+    StaticGet = 0x01,
+    InstancePut = 0x02,
+    InstanceGet = 0x03,
+    InvokeStatic = 0x04,
+    InvokeInstance = 0x05,
+    InvokeConstructor = 0x06,
+    InvokeDirect = 0x07,
+    InvokeInterface = 0x08,
+}
+
+#[derive(Debug)]
+pub enum FieldOrMethodId {
+    Field(FieldId),
+    Method(MethodId),
+}
+
+#[derive(Debug)]
+pub struct MethodHandleItem {
+    handle_type: MethodHandleType,
+    id: FieldOrMethodId,
+}
+
+impl<'a, S: AsRef<[u8]>> ctx::TryFromCtx<'a, &super::Dex<S>> for MethodHandleItem {
+    type Error = Error;
+    type Size = usize;
+
+    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
+        let endian = dex.get_endian();
+        let offset = &mut 0;
+        let handle_type: ushort = source.gread_with(offset, endian)?;
+        let handle_type = MethodHandleType::from_u16(handle_type)
+            .ok_or_else(|| Error::InvalidId(format!("Invalid handle type {}", handle_type)))?;
+        let _: ushort = source.gread_with(offset, endian)?;
+        let id: ushort = source.gread_with(offset, endian)?;
+        let _: ushort = source.gread_with(offset, endian)?;
+        let id = match handle_type {
+            MethodHandleType::StaticPut
+            | MethodHandleType::StaticGet
+            | MethodHandleType::InstancePut
+            | MethodHandleType::InstanceGet => FieldOrMethodId::Field(id as u64),
+            _ => FieldOrMethodId::Method(id as u64),
+        };
+
+        Ok((Self { handle_type, id }, *offset))
     }
 }

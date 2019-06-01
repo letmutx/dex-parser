@@ -4,14 +4,16 @@ use crate::jtype::Type;
 use crate::uint;
 use crate::ushort;
 
-macro_rules! gread_vec_with {
-    ($source:ident,$offset:expr,$cap:expr,$ctx:expr) => {{
+macro_rules! try_gread_vec_with {
+    ($source:ident,$offset:ident,$cap:expr,$ctx:expr) => {{
         let cap = $cap as usize;
+        let ctx = $ctx;
         let mut vec = Vec::with_capacity(cap);
-        unsafe {
-            vec.set_len(cap);
+        // NOTE: gread_inout_with doesn't work when de-serializing encoded array
+        // so using an explicit loop here.
+        for _ in 0..cap {
+            vec.push($source.gread_with($offset, ctx)?);
         }
-        $source.gread_inout_with($offset, &mut vec, $ctx)?;
         vec
     }};
 }

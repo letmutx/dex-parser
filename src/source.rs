@@ -1,8 +1,9 @@
-use crate::ubyte;
 use std::clone::Clone;
 use std::convert::AsRef;
 use std::ops::Index;
 use std::rc::Rc;
+
+use crate::ubyte;
 
 pub(crate) struct Source<T> {
     inner: Rc<T>,

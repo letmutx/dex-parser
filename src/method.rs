@@ -1,3 +1,5 @@
+use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
@@ -6,6 +8,8 @@ use crate::cache::Ref;
 use crate::code::CodeItem;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
+use crate::error::Error;
+use crate::field::FieldId;
 use crate::jtype::Type;
 use crate::jtype::TypeId;
 use crate::string::JString;
@@ -13,6 +17,7 @@ use crate::string::StringId;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
+use crate::utils;
 
 #[derive(Debug)]
 pub struct Method {
@@ -27,8 +32,8 @@ pub struct Method {
 
 pub type ProtoId = ulong;
 
-#[derive(Pread)]
-pub(crate) struct ProtoIdItem {
+#[derive(Pread, Debug)]
+pub struct ProtoIdItem {
     shorty: StringId,
     return_type: TypeId,
     params_off: uint,
@@ -55,17 +60,11 @@ impl Method {
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
         let params = if proto_item.params_off != 0 {
-            let mut offset = proto_item.params_off as usize;
-            let offset = &mut offset;
+            let offset = &mut (proto_item.params_off as usize);
             let endian = dex.get_endian();
             let len = source.gread_with::<uint>(offset, endian)?;
-            let types: Vec<ushort> = read_vec!(source, offset, len, endian);
-            Some(
-                types
-                    .into_iter()
-                    .map(|type_id| dex.get_type(uint::from(type_id)))
-                    .collect::<super::Result<Vec<_>>>()?,
-            )
+            let type_ids: Vec<ushort> = try_gread_vec_with!(source, offset, len, endian);
+            Some(utils::get_types(dex, &type_ids)?)
         } else {
             None
         };
@@ -83,7 +82,7 @@ impl Method {
 }
 
 #[derive(Pread, Debug)]
-pub(crate) struct MethodIdItem {
+pub struct MethodIdItem {
     class_id: ushort,
     proto_id: ushort,
     name_id: StringId,
@@ -117,7 +116,7 @@ impl EncodedItem for EncodedMethod {
 pub(crate) type EncodedMethodArray = EncodedItemArray<EncodedMethod>;
 
 impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
-    type Error = crate::error::Error;
+    type Error = Error;
     type Size = usize;
 
     fn try_from_ctx(source: &'a [u8], prev_id: ulong) -> super::Result<(Self, Self::Size)> {
@@ -133,5 +132,55 @@ impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
             },
             *offset,
         ))
+    }
+}
+
+#[derive(FromPrimitive, Debug)]
+pub enum MethodHandleType {
+    StaticPut = 0x00,
+    StaticGet = 0x01,
+    InstancePut = 0x02,
+    InstanceGet = 0x03,
+    InvokeStatic = 0x04,
+    InvokeInstance = 0x05,
+    InvokeConstructor = 0x06,
+    InvokeDirect = 0x07,
+    InvokeInterface = 0x08,
+}
+
+#[derive(Debug)]
+pub enum FieldOrMethodId {
+    Field(FieldId),
+    Method(MethodId),
+}
+
+#[derive(Debug)]
+pub struct MethodHandleItem {
+    handle_type: MethodHandleType,
+    id: FieldOrMethodId,
+}
+
+impl<'a, S: AsRef<[u8]>> ctx::TryFromCtx<'a, &super::Dex<S>> for MethodHandleItem {
+    type Error = Error;
+    type Size = usize;
+
+    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
+        let endian = dex.get_endian();
+        let offset = &mut 0;
+        let handle_type: ushort = source.gread_with(offset, endian)?;
+        let handle_type = MethodHandleType::from_u16(handle_type)
+            .ok_or_else(|| Error::InvalidId(format!("Invalid handle type {}", handle_type)))?;
+        let _: ushort = source.gread_with(offset, endian)?;
+        let id: ushort = source.gread_with(offset, endian)?;
+        let _: ushort = source.gread_with(offset, endian)?;
+        let id = match handle_type {
+            MethodHandleType::StaticPut
+            | MethodHandleType::StaticGet
+            | MethodHandleType::InstancePut
+            | MethodHandleType::InstanceGet => FieldOrMethodId::Field(id as u64),
+            _ => FieldOrMethodId::Method(id as u64),
+        };
+
+        Ok((Self { handle_type, id }, *offset))
     }
 }

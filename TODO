@@ -1,0 +1,14 @@
+- tests
+   X figure out how to test parsing
+   - add integration tests
+- validations for different constraints
+   - type signature validity
+   - offsets are in correct section
+- left out things
+   - debug info
+   - annotations
+   - static values
+- documentation
+   - how to add docs from android website
+   - where to add them?
+- public api

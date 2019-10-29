@@ -15,7 +15,7 @@ use crate::class::Class;
 use crate::class::ClassDataItem;
 use crate::class::ClassDefItemIter;
 use crate::class::ClassId;
-use crate::code::CodeItem;
+use crate::code::{CodeItem, DebugInfoItem};
 use crate::error;
 use crate::error::Error;
 use crate::field::EncodedField;
@@ -461,6 +461,10 @@ where
         Ok(self
             .source
             .pread_with(annotations_directory_item_off as usize, self)?)
+    }
+
+    pub(crate) fn get_debug_info_item(&self, debug_info_off: uint) -> super::Result<DebugInfoItem> {
+        Ok(self.source.pread_with(debug_info_off as usize, self)?)
     }
 }
 

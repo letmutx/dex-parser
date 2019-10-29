@@ -3,6 +3,7 @@ use std::clone::Clone;
 use scroll::ctx;
 use scroll::{Pread, Uleb128};
 
+use crate::annotation::AnnotationsDirectoryItem;
 use crate::cache::Ref;
 use crate::encoded_item::EncodedItemArrayCtx;
 use crate::encoded_value::EncodedArray;
@@ -27,6 +28,7 @@ pub struct Class {
     pub(crate) super_class: ClassId,
     pub(crate) interfaces: Option<Vec<Type>>,
     pub(crate) jtype: Type,
+    pub(crate) annotations: Option<AnnotationsDirectoryItem>,
     pub(crate) source_file: Option<Ref<JString>>,
     pub(crate) static_fields: Option<Vec<Field>>,
     pub(crate) instance_fields: Option<Vec<Field>>,
@@ -41,6 +43,11 @@ impl Class {
         class_def: &ClassDefItem,
     ) -> super::Result<Self> {
         let data_off = class_def.class_data_off;
+        let annotations = if class_def.annotations_off != 0 {
+            Some(dex.get_annotations_directory_item(class_def.annotations_off)?)
+        } else {
+            None
+        };
 
         let (static_fields, instance_fields, direct_methods, virtual_methods) = dex
             .get_class_data(data_off)?
@@ -55,7 +62,6 @@ impl Class {
                 ))
             })
             .unwrap_or_else(|| Ok::<_, Error>((None, None, None, None)))?;
-
 
         let static_values_off = class_def.static_values_off;
         let static_values = if static_values_off != 0 {
@@ -72,6 +78,7 @@ impl Class {
             interfaces: dex.get_interfaces(class_def.interfaces_off)?,
             access_flags: class_def.access_flags,
             source_file: dex.get_source_file(class_def.source_file_idx)?,
+            annotations,
             static_fields,
             instance_fields,
             direct_methods,

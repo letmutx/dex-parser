@@ -7,6 +7,9 @@ use num_traits::FromPrimitive;
 use scroll::ctx;
 use scroll::Pread;
 
+use crate::annotation::{
+    AnnotationItem, AnnotationSetItem, AnnotationSetRefList, AnnotationsDirectoryItem,
+};
 use crate::cache::Ref;
 use crate::class::Class;
 use crate::class::ClassDataItem;
@@ -373,7 +376,6 @@ where
         Strings::new(self.string_cache.clone(), self.inner.strings_len() as usize)
     }
 
-
     pub(crate) fn get_field(&self, encoded_field: &EncodedField) -> super::Result<Field> {
         Field::try_from_dex(self, encoded_field)
     }
@@ -425,6 +427,40 @@ where
         }
 
         Ok(Some(self.source.pread_with(code_off as usize, self)?))
+    }
+
+    pub(crate) fn get_annotation_item(
+        &self,
+        annotation_off: uint,
+    ) -> super::Result<AnnotationItem> {
+        Ok(self.source.pread_with(annotation_off as usize, self)?)
+    }
+
+    pub(crate) fn get_annotation_set_item(
+        &self,
+        annotation_set_item_off: uint,
+    ) -> super::Result<AnnotationSetItem> {
+        Ok(self
+            .source
+            .pread_with(annotation_set_item_off as usize, self)?)
+    }
+
+    pub(crate) fn get_annotation_set_ref_list(
+        &self,
+        annotation_set_ref_list_off: uint,
+    ) -> super::Result<AnnotationSetRefList> {
+        Ok(self
+            .source
+            .pread_with(annotation_set_ref_list_off as usize, self)?)
+    }
+
+    pub(crate) fn get_annotations_directory_item(
+        &self,
+        annotations_directory_item_off: uint,
+    ) -> super::Result<AnnotationsDirectoryItem> {
+        Ok(self
+            .source
+            .pread_with(annotations_directory_item_off as usize, self)?)
     }
 }
 

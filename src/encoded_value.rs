@@ -1,9 +1,9 @@
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use scroll::ctx;
-use scroll::LE;
 use scroll::Pread;
 use scroll::Uleb128;
+use scroll::LE;
 
 use crate::annotation::EncodedAnnotation;
 use crate::cache::Ref;
@@ -15,13 +15,13 @@ use crate::long;
 use crate::method::MethodHandleItem;
 use crate::method::MethodIdItem;
 use crate::method::ProtoIdItem;
-use crate::Result;
 use crate::short;
 use crate::string::JString;
 use crate::ubyte;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
+use crate::Result;
 
 #[derive(Debug)]
 pub enum EncodedValue {
@@ -70,7 +70,7 @@ enum ValueType {
 macro_rules! try_zero_extended_gread {
     ($source:expr,$offset:expr,$value_arg:expr,$size:expr) => {{
         let mut bytes = [0x0; $size];
-        for (i, value) in $source[1..1+$value_arg].iter().enumerate() {
+        for (i, value) in $source[1..1 + $value_arg].iter().enumerate() {
             bytes[i] = *value;
         }
         let value = bytes.pread_with(0, LE)?;
@@ -86,10 +86,7 @@ where
     type Error = Error;
     type Size = usize;
 
-    fn try_from_ctx(
-        source: &'a [u8],
-        dex: &super::Dex<S>,
-    ) -> Result<(Self, Self::Size)> {
+    fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let header: ubyte = source.gread(offset)?;
         let value_arg = (header >> 5) as usize;

@@ -159,7 +159,7 @@ where
             }
             ValueType::Array => {
                 debug_assert!(value_arg == 0);
-                let encoded_array: EncodedArray = source[1..].gread_with(offset, dex)?;
+                let encoded_array: EncodedArray = source.gread_with(offset, dex)?;
                 EncodedValue::Array(encoded_array.into_inner())
             }
             ValueType::Annotation => {

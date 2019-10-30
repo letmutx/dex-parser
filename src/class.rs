@@ -43,11 +43,6 @@ impl Class {
         class_def: &ClassDefItem,
     ) -> super::Result<Self> {
         let data_off = class_def.class_data_off;
-        let annotations = if class_def.annotations_off != 0 {
-            Some(dex.get_annotations_directory_item(class_def.annotations_off)?)
-        } else {
-            None
-        };
 
         let (static_fields, instance_fields, direct_methods, virtual_methods) = dex
             .get_class_data(data_off)?
@@ -67,6 +62,12 @@ impl Class {
         let static_values = if static_values_off != 0 {
             let source = dex.source.as_ref();
             Some(source.pread_with(static_values_off as usize, dex)?)
+        } else {
+            None
+        };
+
+        let annotations = if class_def.annotations_off != 0 {
+            Some(dex.get_annotations_directory_item(class_def.annotations_off)?)
         } else {
             None
         };

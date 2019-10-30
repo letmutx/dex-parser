@@ -4,7 +4,9 @@ use scroll::Uleb128;
 
 use crate::encoded_value::EncodedValue;
 use crate::error::Error;
+use crate::field::FieldId;
 use crate::jtype::TypeId;
+use crate::method::MethodId;
 use crate::string::StringId;
 use crate::{ubyte, uint};
 
@@ -27,7 +29,7 @@ where
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let type_idx = Uleb128::read(source, offset)?;
-        let type_idx = type_idx as u32;
+        let type_idx = type_idx as TypeId;
         let size = Uleb128::read(source, offset)?;
         let elements = try_gread_vec_with!(source, offset, size, ctx);
         Ok((Self { type_idx, elements }, *offset))
@@ -50,7 +52,7 @@ where
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let name_idx = Uleb128::read(source, offset)?;
-        let name_idx = name_idx as u32;
+        let name_idx = name_idx as StringId;
         let value = source.gread_with(offset, ctx)?;
         Ok((Self { name_idx, value }, *offset))
     }
@@ -154,7 +156,7 @@ where
 
 #[derive(Debug)]
 struct ParameterAnnotation {
-    method_idx: crate::method::MethodId,
+    method_idx: MethodId,
     annotations: AnnotationSetRefList,
 }
 
@@ -168,11 +170,11 @@ where
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let endian = ctx.get_endian();
-        let method_idx = source.gread_with(offset, endian)?;
+        let method_idx: uint = source.gread_with(offset, endian)?;
         let annotation_set_ref_list_off: uint = source.gread_with(offset, endian)?;
         Ok((
             Self {
-                method_idx,
+                method_idx: method_idx as MethodId,
                 annotations: ctx.get_annotation_set_ref_list(annotation_set_ref_list_off)?,
             },
             *offset,
@@ -182,7 +184,7 @@ where
 
 #[derive(Debug)]
 struct MethodAnnotation {
-    method_idx: crate::method::MethodId,
+    method_idx: MethodId,
     annotations: AnnotationSetItem,
 }
 
@@ -195,11 +197,11 @@ where
 
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
-        let method_idx = source.gread_with(offset, ctx.get_endian())?;
+        let method_idx: uint = source.gread_with(offset, ctx.get_endian())?;
         let annotation_set_item_off: uint = source.gread_with(offset, ctx.get_endian())?;
         Ok((
             Self {
-                method_idx,
+                method_idx: method_idx as u64,
                 annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,
@@ -209,7 +211,7 @@ where
 
 #[derive(Debug)]
 struct FieldAnnotation {
-    field_idx: crate::field::FieldId,
+    field_idx: FieldId,
     annotations: AnnotationSetItem,
 }
 
@@ -222,11 +224,11 @@ where
 
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
-        let field_idx = source.gread_with(offset, ctx.get_endian())?;
+        let field_idx: uint = source.gread_with(offset, ctx.get_endian())?;
         let annotation_set_item_off: uint = source.gread_with(offset, ctx.get_endian())?;
         Ok((
             Self {
-                field_idx,
+                field_idx: field_idx as FieldId,
                 annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,

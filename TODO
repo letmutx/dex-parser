@@ -5,9 +5,9 @@
    - type signature validity
    - offsets are in correct section
 - left out things
-   - debug info
-   - annotations
-   - static values
+   X debug info
+   X annotations
+   X static values
 - documentation
    - how to add docs from android website
    - where to add them?

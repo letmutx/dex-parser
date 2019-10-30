@@ -174,7 +174,7 @@ where
         let annotation_set_ref_list_off: uint = source.gread_with(offset, endian)?;
         Ok((
             Self {
-                method_idx: method_idx as MethodId,
+                method_idx: MethodId::from(method_idx),
                 annotations: ctx.get_annotation_set_ref_list(annotation_set_ref_list_off)?,
             },
             *offset,
@@ -201,7 +201,7 @@ where
         let annotation_set_item_off: uint = source.gread_with(offset, ctx.get_endian())?;
         Ok((
             Self {
-                method_idx: method_idx as u64,
+                method_idx: MethodId::from(method_idx),
                 annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,
@@ -228,7 +228,7 @@ where
         let annotation_set_item_off: uint = source.gread_with(offset, ctx.get_endian())?;
         Ok((
             Self {
-                field_idx: field_idx as FieldId,
+                field_idx: FieldId::from(field_idx),
                 annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,

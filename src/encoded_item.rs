@@ -96,7 +96,7 @@ pub(crate) struct EncodedCatchHandler {
 
 impl EncodedCatchHandler {
     pub(crate) fn handlers(&self) -> Vec<CatchHandler> {
-        self.handlers.iter().map(|c| c.clone()).collect()
+        self.handlers.to_vec()
     }
 }
 

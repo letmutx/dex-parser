@@ -70,7 +70,7 @@ enum ValueType {
 macro_rules! try_zero_extended_gread {
     ($source:expr,$offset:expr,$value_arg:expr,$size:expr) => {{
         let mut bytes = [0x0; $size];
-        for (i, value) in $source[1..1 + $value_arg].iter().enumerate() {
+        for (i, value) in $source[1..=$value_arg].iter().enumerate() {
             bytes[i] = *value;
         }
         let value = bytes.pread_with(0, LE)?;
@@ -90,7 +90,7 @@ where
         let offset = &mut 0;
         let header: ubyte = source.gread(offset)?;
         let value_arg = (header >> 5) as usize;
-        let value_type = 0b00011111 & header;
+        let value_type = 0b0001_1111 & header;
         let value_type = ValueType::from_u8(value_type)
             .ok_or_else(|| Error::InvalidId(format!("Invalid value type {}", value_type)))?;
         let value = match value_type {

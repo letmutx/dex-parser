@@ -107,7 +107,7 @@ where
         let mut parameter_names = Vec::with_capacity(parameters_size as usize);
         for _ in 0..parameters_size {
             let string_id = Uleb128::read(source, offset)? + 1;
-            parameter_names.push(if string_id != crate::NO_INDEX as u64 {
+            parameter_names.push(if string_id != u64::from(crate::NO_INDEX) {
                 Some(dex.get_string(string_id as u32)?)
             } else {
                 None

@@ -177,8 +177,8 @@ impl<'a, S: AsRef<[u8]>> ctx::TryFromCtx<'a, &super::Dex<S>> for MethodHandleIte
             MethodHandleType::StaticPut
             | MethodHandleType::StaticGet
             | MethodHandleType::InstancePut
-            | MethodHandleType::InstanceGet => FieldOrMethodId::Field(id as u64),
-            _ => FieldOrMethodId::Method(id as u64),
+            | MethodHandleType::InstanceGet => FieldOrMethodId::Field(FieldId::from(id)),
+            _ => FieldOrMethodId::Method(MethodId::from(id)),
         };
 
         Ok((Self { handle_type, id }, *offset))

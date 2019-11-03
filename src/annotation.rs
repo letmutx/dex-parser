@@ -13,9 +13,12 @@ use crate::{ubyte, uint};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+/// Annotation
 #[derive(Debug)]
 pub struct EncodedAnnotation {
+    /// Type of the annotation. Should be a class type.
     type_idx: TypeId,
+    /// Elements of the annotation
     elements: Vec<AnnotationElement>,
 }
 
@@ -36,9 +39,13 @@ where
     }
 }
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#annotation-element
 #[derive(Debug)]
 pub struct AnnotationElement {
+    /// Name of the element. Should conform to
+    /// https://source.android.com/devices/tech/dalvik/dex-format#membername
     name_idx: StringId,
+    /// Value corresponding to the name.
     value: EncodedValue,
 }
 
@@ -65,6 +72,7 @@ pub enum Visibility {
     System = 0x2,
 }
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#annotation-item
 #[derive(Debug)]
 pub struct AnnotationItem {
     visibility: Visibility,
@@ -94,6 +102,7 @@ where
     }
 }
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#set-ref-list
 #[derive(Debug)]
 pub struct AnnotationSetRefList {
     annotation_set_list: Vec<AnnotationSetItem>,
@@ -125,6 +134,7 @@ where
     }
 }
 
+/// A set of annotations.
 #[derive(Debug)]
 pub struct AnnotationSetItem {
     annotations: Vec<AnnotationItem>,
@@ -154,9 +164,12 @@ where
     }
 }
 
+/// Annotations of a method's parameters.
 #[derive(Debug)]
 struct ParameterAnnotation {
+    /// The method this parameter belongs to.
     method_idx: MethodId,
+    /// The list of annotation sets for the parameters.
     annotations: AnnotationSetRefList,
 }
 
@@ -182,6 +195,8 @@ where
     }
 }
 
+/// Annotations of a method.
+/// https://source.android.com/devices/tech/dalvik/dex-format#method-annotation
 #[derive(Debug)]
 struct MethodAnnotation {
     method_idx: MethodId,
@@ -209,6 +224,8 @@ where
     }
 }
 
+/// Annotations of a field.
+/// https://source.android.com/devices/tech/dalvik/dex-format#field-annotation
 #[derive(Debug)]
 struct FieldAnnotation {
     field_idx: FieldId,
@@ -236,6 +253,7 @@ where
     }
 }
 
+/// Annotations of class, fields, methods and parameters of a class.
 #[derive(Debug)]
 pub(crate) struct AnnotationsDirectoryItem {
     class_annotations: Option<AnnotationSetItem>,

@@ -12,11 +12,17 @@ use crate::uint;
 use crate::ulong;
 use crate::ushort;
 
+// TODO: add accessor methods
+/// Represents the field of a class
 #[derive(Debug)]
 pub struct Field {
+    /// Name of the field.
     name: Ref<JString>,
+    /// Type of the field.
     jtype: Type,
+    /// Class which this field belongs to.
     class: ClassId,
+    /// Access flags for the field.
     access_flags: ulong,
 }
 
@@ -37,6 +43,7 @@ impl Field {
 
 pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#field-id-item
 #[derive(Pread, Debug)]
 pub struct FieldIdItem {
     class_idx: ushort,
@@ -56,6 +63,7 @@ impl FieldIdItem {
 
 pub type FieldId = ulong;
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#encoded-field-format
 pub(crate) struct EncodedField {
     pub(crate) field_id: FieldId,
     access_flags: ulong,

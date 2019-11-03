@@ -14,6 +14,9 @@ use crate::Result;
 
 pub type StringId = uint;
 
+/// Strings in `Dex` file are encoded as MUTF-8 code units. JString is a
+/// wrapper type for converting Java strings into Rust strings.
+/// https://source.android.com/devices/tech/dalvik/dex-format#mutf-8
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub struct JString {
     string: String,
@@ -43,6 +46,7 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
     type Error = error::Error;
     type Size = usize;
 
+    /// https://source.android.com/devices/tech/dalvik/dex-format#string-data-item
     fn try_from_ctx(source: &'a [u8], _: scroll::Endian) -> Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let _ = Uleb128::read(source, offset)?;
@@ -62,10 +66,15 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
     }
 }
 
+/// To prevent encoding/decoding Java strings to Rust strings
+/// every time, we cache the strings in memory. This also potentially
+/// reduces I/O because strings are used in a lot of places.
 pub(crate) struct StringCache<T> {
     source: Source<T>,
+    ///  Offset into the strings section.
     offset: uint,
     endian: super::Endian,
+    /// Length of the strings section.
     len: uint,
     cache: Cache<StringId, JString>,
 }
@@ -74,6 +83,7 @@ impl<T> StringCache<T>
 where
     T: AsRef<[u8]>,
 {
+    /// Returns a new instance of the string cache
     pub(crate) fn new(
         source: Source<T>,
         endian: super::Endian,
@@ -97,6 +107,7 @@ where
         source.pread(string_data_off as usize)
     }
 
+    /// Get the string at `id` updating the cache with the new item
     pub(crate) fn get(&self, id: StringId) -> Result<Ref<JString>> {
         if id >= self.len {
             return Err(Error::InvalidId(format!("Invalid string id: {}", id)));
@@ -122,7 +133,9 @@ impl<T> Clone for StringCache<T> {
     }
 }
 
+/// Iterator over the strings in the strings section.
 pub struct Strings<T> {
+    /// String cache shared by the parent `Dex`
     cache: StringCache<T>,
     current: usize,
     len: usize,
@@ -141,11 +154,13 @@ impl<T: AsRef<[u8]>> Strings<T> {
 impl<T: AsRef<[u8]>> Iterator for Strings<T> {
     type Item = super::Result<Ref<JString>>;
 
+    // NOTE: iteration may cause cache thrashing, introduce a new
+    // method to get but not update cache if needed
     fn next(&mut self) -> Option<Self::Item> {
         if self.current >= self.len {
             return None;
         }
-        let next = self.cache.get(self.current as u32);
+        let next = self.cache.get(self.current as uint);
         self.current += 1;
         Some(next)
     }

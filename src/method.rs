@@ -19,19 +19,30 @@ use crate::ulong;
 use crate::ushort;
 use crate::utils;
 
+// TODO: add accessor methods
+/// Represents a class method.
 #[derive(Debug)]
 pub struct Method {
-    class_id: Type,
+    /// Parent class of the method.
+    class: Type,
+    /// Name of the method.
     name: Ref<JString>,
+    /// Access flags of the method.
     access_flags: ulong,
+    /// Types of the parameters of the method.
     params: Option<Vec<Type>>,
+    /// Shorty descriptor of the method. Conforms to
+    /// https://source.android.com/devices/tech/dalvik/dex-format#shortydescriptor
     shorty: Ref<JString>,
+    /// Return type of the method.
     return_type: Type,
+    /// Code and DebugInfo of the method.
     code: Option<CodeItem>,
 }
 
 pub type ProtoId = ulong;
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#proto-id-item
 #[derive(Pread, Debug)]
 pub struct ProtoIdItem {
     shorty: StringId,
@@ -71,7 +82,7 @@ impl Method {
         let code = dex.get_code_item(encoded_method.code_offset)?;
         Ok(Self {
             name: dex.get_string(method_item.name_id)?,
-            class_id: dex.get_type(uint::from(method_item.class_id))?,
+            class: dex.get_type(uint::from(method_item.class_id))?,
             access_flags: encoded_method.access_flags,
             shorty,
             return_type,
@@ -81,6 +92,7 @@ impl Method {
     }
 }
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#method-id-item
 #[derive(Pread, Debug)]
 pub struct MethodIdItem {
     class_id: ushort,
@@ -100,6 +112,7 @@ impl MethodIdItem {
 
 pub type MethodId = ulong;
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#encoded-method
 #[derive(Debug)]
 pub(crate) struct EncodedMethod {
     pub(crate) method_id: MethodId,
@@ -135,6 +148,8 @@ impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
     }
 }
 
+/// Type of the method handle.
+/// https://source.android.com/devices/tech/dalvik/dex-format#method-handle-type-codes
 #[derive(FromPrimitive, Debug)]
 pub enum MethodHandleType {
     StaticPut = 0x00,
@@ -154,6 +169,7 @@ pub enum FieldOrMethodId {
     Method(MethodId),
 }
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#method-handle-item
 #[derive(Debug)]
 pub struct MethodHandleItem {
     handle_type: MethodHandleType,

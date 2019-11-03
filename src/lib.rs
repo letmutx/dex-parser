@@ -6,7 +6,7 @@ use scroll;
 pub use error::Error;
 
 pub use crate::dex::Dex;
-pub use crate::dex::DexBuilder;
+pub use crate::dex::DexReader;
 
 #[macro_use]
 mod utils;
@@ -25,7 +25,11 @@ mod source;
 mod string;
 
 const NO_INDEX: uint = 0xffff_ffff;
+const ENDIAN_CONSTANT: (ubyte, ubyte, ubyte, ubyte) = (0x12, 0x34, 0x56, 0x78);
+const REVERSE_ENDIAN_CONSTANT: (ubyte, ubyte, ubyte, ubyte) = (0x78, 0x56, 0x34, 0x12);
 
+#[allow(non_camel_case_types)]
+pub type byte = i8;
 #[allow(non_camel_case_types)]
 pub type uint = u32;
 #[allow(non_camel_case_types)]

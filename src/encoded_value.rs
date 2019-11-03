@@ -23,6 +23,8 @@ use crate::ulong;
 use crate::ushort;
 use crate::Result;
 
+/// Used to represent values of fields, annotations etc.
+/// https://source.android.com/devices/tech/dalvik/dex-format#encoding
 #[derive(Debug)]
 pub enum EncodedValue {
     Byte(ubyte),
@@ -45,6 +47,7 @@ pub enum EncodedValue {
     Boolean(bool),
 }
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#value-formats
 #[derive(FromPrimitive, Debug)]
 enum ValueType {
     Byte = 0x00,
@@ -179,6 +182,7 @@ where
     }
 }
 
+/// Array of `EncodedValue`s
 #[derive(Debug)]
 pub struct EncodedArray {
     values: Vec<EncodedValue>,

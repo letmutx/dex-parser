@@ -23,20 +23,35 @@ pub type AccessFlags = uint;
 
 #[derive(Debug)]
 pub struct Class {
+    /// Index into type_ids. TypeId should refer to a class type.
     pub(crate) id: ClassId,
-    pub(crate) access_flags: AccessFlags,
-    pub(crate) super_class: ClassId,
-    pub(crate) interfaces: Option<Vec<Type>>,
+    /// Type of this class.
     pub(crate) jtype: Type,
+    /// Access flags for the class (public, final etc.)
+    /// https://source.android.com/devices/tech/dalvik/dex-format#access-flags
+    pub(crate) access_flags: AccessFlags,
+    /// Index into the type_ids for the super class, if there is one.
+    pub(crate) super_class: Option<ClassId>,
+    /// List of the interfaces implemented by this class.
+    pub(crate) interfaces: Option<Vec<Type>>,
+    /// Annotations of the class, fields, methods and their parameters.
     pub(crate) annotations: Option<AnnotationsDirectoryItem>,
+    /// The file in which this class is found in the source code.
     pub(crate) source_file: Option<Ref<JString>>,
+    /// Static fields defined in the class.
     pub(crate) static_fields: Option<Vec<Field>>,
+    /// Instance fields defined in the class.
     pub(crate) instance_fields: Option<Vec<Field>>,
+    /// List of static, private methods and constructors defined in the class.
     pub(crate) direct_methods: Option<Vec<Method>>,
+    /// List of parent class methods overriden by this class.
     pub(crate) virtual_methods: Option<Vec<Method>>,
+    /// Values of the static fields in the same order as static fields.
+    /// Other static fields assume `0` or `null` values.
     pub(crate) static_values: Option<EncodedArray>,
 }
 
+// TODO: add accessor methods for all fields
 impl Class {
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
@@ -71,11 +86,16 @@ impl Class {
         } else {
             None
         };
+        let super_class = if class_def.superclass_idx == super::NO_INDEX {
+            Some(class_def.superclass_idx)
+        } else {
+            None
+        };
 
         Ok(Class {
             id: class_def.class_idx,
             jtype: dex.get_type(class_def.class_idx)?,
-            super_class: class_def.superclass_idx,
+            super_class,
             interfaces: dex.get_interfaces(class_def.interfaces_off)?,
             access_flags: class_def.access_flags,
             source_file: dex.get_source_file(class_def.source_file_idx)?,
@@ -93,6 +113,8 @@ impl Class {
     }
 }
 
+/// Contains the details about fields and methods of a class.
+/// https://source.android.com/devices/tech/dalvik/dex-format#class-data-item
 pub(crate) struct ClassDataItem {
     static_fields: Option<EncodedFieldArray>,
     instance_fields: Option<EncodedFieldArray>,
@@ -126,6 +148,7 @@ where
     }
 }
 
+/// https://source.android.com/devices/tech/dalvik/dex-format#class-def-item
 #[derive(Copy, Clone, Debug, Pread)]
 pub(crate) struct ClassDefItem {
     pub(crate) class_idx: uint,
@@ -138,7 +161,9 @@ pub(crate) struct ClassDefItem {
     pub(crate) static_values_off: uint,
 }
 
+/// Iterator over the class_def_items in the class_defs section.
 pub(crate) struct ClassDefItemIter<T> {
+    /// Source file of the parent `Dex`.
     source: Source<T>,
     offset: usize,
     len: uint,

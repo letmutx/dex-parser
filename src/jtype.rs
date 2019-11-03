@@ -7,17 +7,26 @@ use crate::uint;
 pub type TypeId = uint;
 
 // TODO: add new function
+/// Represents a java type. The type descriptor conforms to
+/// https://source.android.com/devices/tech/dalvik/dex-format#typedescriptor
 #[derive(Debug)]
-pub struct Type(pub(crate) TypeId, pub(crate) Ref<JString>);
+pub struct Type {
+    pub(crate) id: TypeId,
+    /// The type descriptor string for this string.
+    pub(crate) type_descriptor: Ref<JString>,
+}
 
 impl Clone for Type {
     fn clone(&self) -> Self {
-        Type(self.0, self.1.clone())
+        Type {
+            id: self.id,
+            type_descriptor: self.type_descriptor.clone(),
+        }
     }
 }
 
 impl PartialEq<Type> for Type {
     fn eq(&self, other: &Type) -> bool {
-        self.0 == other.0
+        self.id == other.id
     }
 }

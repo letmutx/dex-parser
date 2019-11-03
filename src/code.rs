@@ -10,48 +10,70 @@ use crate::uint;
 use crate::ulong;
 use crate::ushort;
 
+/// Debug Info of a method.
+/// https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item
 #[derive(Debug)]
 pub struct DebugInfoItem {
     line_start: usize,
     parameter_names: Vec<Option<Ref<JString>>>,
 }
 
+/// Code and Debug Info of a method.
 #[derive(Debug)]
 pub struct CodeItem {
+    /// The number of registers the method must use.
     registers_size: ushort,
+    /// Line number and source file information.
     debug_info_item: Option<DebugInfoItem>,
+    /// Number of words for incoming arguments to this method.
     ins_size: ushort,
+    /// Number of words for outgoing arguments required for invocation.
     outs_size: ushort,
+    /// Code instructions for this method.
     insns: Vec<ushort>,
+    /// Try, Exception handling information of this method.
     tries: Option<Tries>,
 }
 
+/// Represents a Try-Catch block
 #[derive(Pread, Clone, Copy, Debug)]
 pub(crate) struct TryItem {
+    /// The instruction at which the try block starts.
     start_addr: uint,
+    /// Number of instructions the try block covers.
     insn_count: ushort,
+    /// Exception handler offset.
     handler_off: ushort,
 }
 
 #[derive(Debug, Clone)]
 pub enum ExceptionType {
+    /// The `Exception` class.
     BaseException,
+    /// Sub-types of the `Exception` class.
     Ty(Type),
 }
 
 #[derive(Debug, Clone)]
 pub struct CatchHandler {
+    /// Type of the exception handled by this handler.
     pub(crate) exception: ExceptionType,
+    /// Start address of the catch handler.
     pub(crate) addr: ulong,
 }
 
+/// Represents Try and catch blocks.
 #[derive(Debug)]
 pub struct TryCatchHandlers {
+    /// Start of the try block.
     start_addr: uint,
+    /// Number of instructions covered by this try block.
     insn_count: ushort,
+    /// List fo catch handlers for this try block.
     catch_handlers: Vec<CatchHandler>,
 }
 
+/// List of try-catch blocks found in this method.
 #[derive(Debug)]
 pub struct Tries {
     inner: Vec<TryCatchHandlers>,
@@ -108,7 +130,7 @@ where
         for _ in 0..parameters_size {
             let string_id = Uleb128::read(source, offset)? + 1;
             parameter_names.push(if string_id != u64::from(crate::NO_INDEX) {
-                Some(dex.get_string(string_id as u32)?)
+                Some(dex.get_string(string_id as uint)?)
             } else {
                 None
             });

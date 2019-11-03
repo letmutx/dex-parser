@@ -5,6 +5,9 @@ use std::rc::Rc;
 
 use crate::ubyte;
 
+/// Represents the source `Dex` file. This is a
+/// wrapper type that allows for shallow copies
+/// of the dex file's source.
 pub(crate) struct Source<T> {
     inner: Rc<T>,
 }

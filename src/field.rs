@@ -11,6 +11,7 @@ use crate::string::StringId;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
+use crate::FieldAccessFlags;
 
 // TODO: add accessor methods
 /// Represents the field of a class
@@ -23,7 +24,7 @@ pub struct Field {
     /// Class which this field belongs to.
     class: ClassId,
     /// Access flags for the field.
-    access_flags: ulong,
+    access_flags: FieldAccessFlags,
 }
 
 impl Field {
@@ -36,7 +37,14 @@ impl Field {
             name: dex.get_string(field_item.name_idx)?,
             jtype: dex.get_type(uint::from(field_item.type_idx))?,
             class: uint::from(field_item.class_idx),
-            access_flags: encoded_field.access_flags,
+            access_flags: FieldAccessFlags::from_bits(encoded_field.access_flags).ok_or_else(
+                || {
+                    Error::InvalidId(format!(
+                        "Invalid access flags when loading field {}",
+                        field_item.name_idx
+                    ))
+                },
+            )?,
         })
     }
 }

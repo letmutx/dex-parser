@@ -18,6 +18,7 @@ use crate::uint;
 use crate::ulong;
 use crate::ushort;
 use crate::utils;
+use crate::MethodAccessFlags;
 
 // TODO: add accessor methods
 /// Represents a class method.
@@ -28,7 +29,7 @@ pub struct Method {
     /// Name of the method.
     name: Ref<JString>,
     /// Access flags of the method.
-    access_flags: ulong,
+    access_flags: MethodAccessFlags,
     /// Types of the parameters of the method.
     params: Option<Vec<Type>>,
     /// Shorty descriptor of the method. Conforms to
@@ -83,7 +84,14 @@ impl Method {
         Ok(Self {
             name: dex.get_string(method_item.name_id)?,
             class: dex.get_type(uint::from(method_item.class_id))?,
-            access_flags: encoded_method.access_flags,
+            access_flags: MethodAccessFlags::from_bits(encoded_method.access_flags).ok_or_else(
+                || {
+                    Error::InvalidId(format!(
+                        "Invalid access flags for method {}",
+                        method_item.name_id
+                    ))
+                },
+            )?,
             shorty,
             return_type,
             params,

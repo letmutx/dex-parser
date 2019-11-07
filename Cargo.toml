@@ -12,6 +12,7 @@ memmap = "0.7.0"
 lru = "0.1.13"
 num-traits = "0.2"
 num-derive = "0.2"
+bitflags = "1.2.1"
 
 [dev-dependencies]
 tempfile = "3.0.8"

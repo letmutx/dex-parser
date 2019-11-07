@@ -1,6 +1,9 @@
 #[macro_use]
 extern crate scroll_derive;
 
+#[macro_use]
+extern crate bitflags;
+
 use scroll;
 
 pub use error::Error;
@@ -23,6 +26,54 @@ mod jtype;
 mod method;
 mod source;
 mod string;
+
+bitflags! {
+    pub struct ClassAccessFlags: uint {
+        const PUBLIC = 0x1;
+        const PRIVATE = 0x2;
+        const PROTECTED = 0x4;
+        const STATIC = 0x8;
+        const FINAL = 0x10;
+        const INTERFACE = 0x200;
+        const ABSTRACT = 0x400;
+        const SYNTHETIC = 0x1000;
+        const ANNOTATION = 0x2000;
+        const ENUM = 0x4000;
+    }
+}
+
+bitflags! {
+    pub struct FieldAccessFlags: ulong {
+        const PUBLIC = 0x1;
+        const PRIVATE = 0x2;
+        const PROTECTED = 0x4;
+        const STATIC = 0x8;
+        const FINAL = 0x10;
+        const VOLATILE = 0x40;
+        const TRANSIENT = 0x80;
+        const SYNTHETIC = 0x1000;
+        const ANNOTATION = 0x2000;
+        const ENUM = 0x4000;
+    }
+}
+
+bitflags! {
+    pub struct MethodAccessFlags: ulong {
+        const PUBLIC = 0x1;
+        const PRIVATE = 0x2;
+        const PROTECTED = 0x4;
+        const STATIC = 0x8;
+        const FINAL = 0x10;
+        const SYNCHRONIZED = 0x20;
+        const VARARGS = 0x80;
+        const NATIVE = 0x100;
+        const ABSTRACT = 0x400;
+        const STRICT = 0x800;
+        const SYNTHETIC = 0x1000;
+        const CONSTRUCTOR = 0x10000;
+        const DECLARED_SYNCHRONIZED = 0x20000;
+    }
+}
 
 const NO_INDEX: uint = 0xffff_ffff;
 const ENDIAN_CONSTANT: (ubyte, ubyte, ubyte, ubyte) = (0x12, 0x34, 0x56, 0x78);

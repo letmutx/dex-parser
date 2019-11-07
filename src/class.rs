@@ -16,10 +16,9 @@ use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
 use crate::uint;
+use crate::ClassAccessFlags;
 
 pub type ClassId = uint;
-// TODO: define an enum for this
-pub type AccessFlags = uint;
 
 #[derive(Debug)]
 pub struct Class {
@@ -29,7 +28,7 @@ pub struct Class {
     pub(crate) jtype: Type,
     /// Access flags for the class (public, final etc.)
     /// https://source.android.com/devices/tech/dalvik/dex-format#access-flags
-    pub(crate) access_flags: AccessFlags,
+    pub(crate) access_flags: ClassAccessFlags,
     /// Index into the type_ids for the super class, if there is one.
     pub(crate) super_class: Option<ClassId>,
     /// List of the interfaces implemented by this class.
@@ -97,7 +96,12 @@ impl Class {
             jtype: dex.get_type(class_def.class_idx)?,
             super_class,
             interfaces: dex.get_interfaces(class_def.interfaces_off)?,
-            access_flags: class_def.access_flags,
+            access_flags: ClassAccessFlags::from_bits(class_def.access_flags).ok_or_else(|| {
+                Error::InvalidId(format!(
+                    "Invalid Access flags in class {}",
+                    class_def.class_idx
+                ))
+            })?,
             source_file: dex.get_source_file(class_def.source_file_idx)?,
             annotations,
             static_fields,

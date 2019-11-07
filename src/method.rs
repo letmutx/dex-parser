@@ -66,9 +66,13 @@ impl Method {
         dex: &super::Dex<S>,
         encoded_method: &EncodedMethod,
     ) -> super::Result<Method> {
-        let source = dex.source.as_ref();
+        debug!(target: "method", "encoded method: {:?}", encoded_method);
+        let source = &dex.source;
         let method_item = dex.get_method_item(encoded_method.method_id)?;
+        let name = dex.get_string(method_item.name_id)?;
+        debug!(target: "method", "name: {}, method id item: {:?}", name, method_item);
         let proto_item = dex.get_proto_item(ulong::from(method_item.proto_id))?;
+        debug!(target: "method", "method proto_item: {:?}", proto_item);
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
         let params = if proto_item.params_off != 0 {
@@ -80,9 +84,10 @@ impl Method {
         } else {
             None
         };
+        debug!(target: "method", "code item offset: {}", encoded_method.code_offset);
         let code = dex.get_code_item(encoded_method.code_offset)?;
         Ok(Self {
-            name: dex.get_string(method_item.name_id)?,
+            name,
             class: dex.get_type(uint::from(method_item.class_id))?,
             access_flags: MethodAccessFlags::from_bits(encoded_method.access_flags).ok_or_else(
                 || {
@@ -113,7 +118,7 @@ impl MethodIdItem {
         dex: &super::Dex<S>,
         offset: ulong,
     ) -> super::Result<Self> {
-        let source = dex.source.as_ref();
+        let source = &dex.source;
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }

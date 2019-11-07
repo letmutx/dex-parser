@@ -1,4 +1,5 @@
 use std::clone::Clone;
+use std::fmt;
 
 use crate::cache::Ref;
 use crate::string::JString;
@@ -28,5 +29,11 @@ impl Clone for Type {
 impl PartialEq<Type> for Type {
     fn eq(&self, other: &Type) -> bool {
         self.id == other.id
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.type_descriptor)
     }
 }

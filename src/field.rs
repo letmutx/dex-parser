@@ -32,7 +32,9 @@ impl Field {
         dex: &super::Dex<S>,
         encoded_field: &EncodedField,
     ) -> super::Result<Self> {
+        debug!(target: "field", "encoded field: {:?}", encoded_field);
         let field_item = dex.get_field_item(encoded_field.field_id)?;
+        debug!(target: "field", "field id item: {:?}", field_item);
         Ok(Self {
             name: dex.get_string(field_item.name_idx)?,
             jtype: dex.get_type(uint::from(field_item.type_idx))?,
@@ -64,7 +66,7 @@ impl FieldIdItem {
         dex: &super::Dex<T>,
         offset: ulong,
     ) -> super::Result<Self> {
-        let source = dex.source.as_ref();
+        let source = &dex.source;
         Ok(source.pread_with(offset as usize, dex.get_endian())?)
     }
 }
@@ -72,6 +74,7 @@ impl FieldIdItem {
 pub type FieldId = ulong;
 
 /// https://source.android.com/devices/tech/dalvik/dex-format#encoded-field-format
+#[derive(Debug)]
 pub(crate) struct EncodedField {
     pub(crate) field_id: FieldId,
     access_flags: ulong,

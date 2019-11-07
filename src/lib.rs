@@ -4,6 +4,9 @@ extern crate scroll_derive;
 #[macro_use]
 extern crate bitflags;
 
+#[macro_use]
+extern crate log;
+
 use scroll;
 
 pub use error::Error;
@@ -65,6 +68,7 @@ bitflags! {
         const STATIC = 0x8;
         const FINAL = 0x10;
         const SYNCHRONIZED = 0x20;
+        const BRIDGE = 0x40;
         const VARARGS = 0x80;
         const NATIVE = 0x100;
         const ABSTRACT = 0x400;

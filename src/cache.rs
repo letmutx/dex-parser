@@ -1,13 +1,25 @@
 use std::cell::RefCell;
 use std::cmp::Eq;
+use std::fmt;
 use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;
 
 use lru::LruCache;
 
-#[derive(Debug)]
 pub struct Ref<V>(Rc<V>);
+
+impl<V: fmt::Debug> fmt::Debug for Ref<V> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+impl<V: fmt::Display> fmt::Display for Ref<V> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl<V> Ref<V> {
     pub(crate) fn new(value: V) -> Self {

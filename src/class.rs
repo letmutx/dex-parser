@@ -56,6 +56,11 @@ impl Class {
         dex: &super::Dex<T>,
         class_def: &ClassDefItem,
     ) -> super::Result<Self> {
+        debug!(target: "class", "trying to load class: {}", class_def.class_idx);
+        let jtype = dex.get_type(class_def.class_idx)?;
+
+        debug!(target: "class", "class: {}, jtype: {}", class_def.class_idx, jtype);
+
         let data_off = class_def.class_data_off;
 
         let (static_fields, instance_fields, direct_methods, virtual_methods) = dex
@@ -72,28 +77,20 @@ impl Class {
             })
             .unwrap_or_else(|| Ok::<_, Error>((None, None, None, None)))?;
 
-        let static_values_off = class_def.static_values_off;
-        let static_values = if static_values_off != 0 {
-            let source = dex.source.as_ref();
-            Some(source.pread_with(static_values_off as usize, dex)?)
-        } else {
-            None
-        };
+        let static_values = dex.get_static_values(class_def.static_values_off)?;
 
-        let annotations = if class_def.annotations_off != 0 {
-            Some(dex.get_annotations_directory_item(class_def.annotations_off)?)
-        } else {
-            None
-        };
+        let annotations = dex.get_annotations_directory_item(class_def.annotations_off)?;
+        debug!(target: "class", "super class id: {}", class_def.superclass_idx);
         let super_class = if class_def.superclass_idx == super::NO_INDEX {
             Some(class_def.superclass_idx)
         } else {
             None
         };
+        debug!(target: "class", "access flags: {}", class_def.access_flags);
 
         Ok(Class {
             id: class_def.class_idx,
-            jtype: dex.get_type(class_def.class_idx)?,
+            jtype,
             super_class,
             interfaces: dex.get_interfaces(class_def.interfaces_off)?,
             access_flags: ClassAccessFlags::from_bits(class_def.access_flags).ok_or_else(|| {
@@ -139,6 +136,9 @@ where
         let instance_field_size = Uleb128::read(source, offset)?;
         let direct_methods_size = Uleb128::read(source, offset)?;
         let virtual_methods_size = Uleb128::read(source, offset)?;
+
+        debug!(target: "class data", "static-fields: {}, instance-fields: {}, direct-methods: {}, virtual-methods: {}",
+            static_field_size, instance_field_size, direct_methods_size, virtual_methods_size);
 
         Ok((
             ClassDataItem {

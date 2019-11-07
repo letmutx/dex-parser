@@ -1,5 +1,6 @@
 use scroll::ctx;
 use scroll::{Pread, Uleb128};
+use std::fmt;
 
 use crate::cache::Ref;
 use crate::encoded_item::EncodedCatchHandlers;
@@ -19,20 +20,26 @@ pub struct DebugInfoItem {
 }
 
 /// Code and Debug Info of a method.
-#[derive(Debug)]
 pub struct CodeItem {
     /// The number of registers the method must use.
-    registers_size: ushort,
+    pub registers_size: ushort,
     /// Line number and source file information.
-    debug_info_item: Option<DebugInfoItem>,
+    pub debug_info_item: Option<DebugInfoItem>,
     /// Number of words for incoming arguments to this method.
-    ins_size: ushort,
+    pub ins_size: ushort,
     /// Number of words for outgoing arguments required for invocation.
-    outs_size: ushort,
+    pub outs_size: ushort,
     /// Code instructions for this method.
-    insns: Vec<ushort>,
+    pub insns: Vec<ushort>,
     /// Try, Exception handling information of this method.
-    tries: Option<Tries>,
+    pub tries: Option<Tries>,
+}
+
+impl fmt::Debug for CodeItem {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "CodeItem {{ registers_size: {}, debug_info: {}, ins_size: {}, outs_size: {}, tries: {} }}",
+            self.registers_size, self.debug_info_item.is_some(), self.ins_size, self.outs_size, self.tries.is_some())
+    }
 }
 
 /// Represents a Try-Catch block

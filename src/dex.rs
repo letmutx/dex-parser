@@ -18,6 +18,7 @@ use crate::class::ClassDefItem;
 use crate::class::ClassDefItemIter;
 use crate::class::ClassId;
 use crate::code::{CodeItem, DebugInfoItem};
+use crate::encoded_value::EncodedArray;
 use crate::error;
 use crate::error::Error;
 use crate::field::EncodedField;
@@ -35,9 +36,9 @@ use crate::method::ProtoId;
 use crate::method::ProtoIdItem;
 use crate::source::Source;
 use crate::string::JString;
-use crate::string::StringCache;
 use crate::string::StringId;
 use crate::string::Strings;
+use crate::string::StringsIter;
 use crate::ubyte;
 use crate::uint;
 use crate::ulong;
@@ -188,6 +189,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
 
     fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size)> {
         if source.len() <= 44 {
+            error!("malformed dex: size < minimum header size");
             return Err(Error::MalFormed("Invalid dex file".to_string()));
         }
         let endian_tag = &source[40..44];
@@ -198,6 +200,8 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
         };
         let header = source.pread_with::<Header>(0, endian)?;
         let map_list = source.pread_with(header.map_off as usize, endian)?;
+        debug!(target: "initialization", "header: {:?}, endian-ness: {:?}", header, endian);
+        debug!(target: "initialization", "map_list: {:?}", map_list);
         Ok((
             DexInner {
                 header,
@@ -314,7 +318,7 @@ pub struct Dex<T> {
     /// Source from which this Dex file is loaded from.
     pub(crate) source: Source<T>,
     /// Items in string_ids section are cached here.
-    pub(crate) string_cache: StringCache<T>,
+    pub(crate) strings: Strings<T>,
     pub(crate) inner: DexInner,
 }
 
@@ -338,7 +342,7 @@ where
                 string_id
             )));
         }
-        self.string_cache.get(string_id)
+        self.strings.get(string_id)
     }
 
     /// Returns the `Type` represented by the give type_id.
@@ -384,23 +388,36 @@ where
         })
     }
 
+    pub fn get_class_by_name(&self, class_name: &str) -> Result<Option<Class>> {
+        let string_id = self.strings.get_id(class_name)?;
+        if string_id.is_none() {
+            return Ok(None);
+        }
+        unimplemented!()
+    }
+
     pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Option<Vec<Type>>> {
+        debug!(target: "interfaces", "interfaces offset: {}", offset);
         let mut offset = offset as usize;
         if offset == 0 {
             return Ok(None);
         }
-        let source = self.source.as_ref();
+        let source = &self.source;
         let endian = self.get_endian();
         let len = source.gread_with::<uint>(&mut offset, endian)?;
+        debug!(target: "interfaces", "interfaces length: {}", len);
         let offset = &mut offset;
         let type_ids: Vec<ushort> = try_gread_vec_with!(source, offset, len, endian);
-        Ok(Some(utils::get_types(self, &type_ids)?))
+        let types = utils::get_types(self, &type_ids)?;
+        Ok(Some(types))
     }
 
     pub(crate) fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
         let offset = ulong::from(self.inner.field_ids_offset()) + field_id * 8;
         let max_offset = self.inner.field_ids_offset() + (self.inner.field_ids_len() - 1) * 8;
         let max_offset = ulong::from(max_offset);
+        debug!(target: "field-id-item", "current offset: {}, min_offset: {}, max_offset: {}",
+                offset, self.inner.field_ids_offset(), max_offset);
         if offset > max_offset {
             return Err(error::Error::InvalidId(format!(
                 "Invalid field id: {}",
@@ -414,6 +431,8 @@ where
         let offset = ulong::from(self.inner.proto_ids_offset()) + proto_id * 12;
         let max_offset = ulong::from(self.inner.proto_ids_offset())
             + ulong::from((self.inner.proto_ids_len() - 1) * 12);
+        debug!(target: "proto-item", "proto item current offset: {}, min_offset: {}, max_offset: {}",
+            offset, self.inner.proto_ids_offset(), max_offset);
         if offset > max_offset {
             return Err(error::Error::InvalidId(format!(
                 "Invalid proto id: {}",
@@ -427,6 +446,8 @@ where
         let offset = ulong::from(self.inner.method_ids_offset()) + method_id * 8;
         let max_offset = self.inner.method_ids_offset() + (self.inner.method_ids_len() - 1) * 8;
         let max_offset = ulong::from(max_offset);
+        debug!(target: "method-item", "method item current offset: {}, min_offset: {}, max_offset: {}",
+            offset, self.inner.method_ids_offset(), max_offset);
         if offset > max_offset {
             return Err(error::Error::InvalidId(format!(
                 "Invalid method id: {}",
@@ -438,7 +459,7 @@ where
 
     /// Iterator over the strings
     pub fn strings(&self) -> impl Iterator<Item = Result<Ref<JString>>> {
-        Strings::new(self.string_cache.clone(), self.inner.strings_len() as usize)
+        StringsIter::new(self.strings.clone(), self.inner.strings_len() as usize)
     }
 
     pub(crate) fn get_field(&self, encoded_field: &EncodedField) -> Result<Field> {
@@ -450,12 +471,11 @@ where
     }
 
     pub(crate) fn get_class_data(&self, offset: uint) -> Result<Option<ClassDataItem>> {
+        debug!(target: "class-data", "class data offset: {}", offset);
         if offset == 0 {
             return Ok(None);
         }
-        Ok(Some(
-            self.source.as_ref().pread_with(offset as usize, self)?,
-        ))
+        Ok(Some(self.source.pread_with(offset as usize, self)?))
     }
 
     pub(crate) fn get_method_handle_item(
@@ -488,7 +508,7 @@ where
     /// Iterator over the classes
     pub fn classes(&self) -> impl Iterator<Item = Result<Class>> + '_ {
         self.class_defs()
-            .map(move |class_def_item| Class::try_from_dex(&self, &class_def_item?))
+            .map(move |class_def_item| Ok(Class::try_from_dex(&self, &class_def_item?).unwrap()))
     }
 
     pub(crate) fn get_code_item(&self, code_off: ulong) -> Result<Option<CodeItem>> {
@@ -500,16 +520,22 @@ where
     }
 
     pub(crate) fn get_annotation_item(&self, annotation_off: uint) -> Result<AnnotationItem> {
+        debug!(target: "annotaion-item", "annotation item offset: {}", annotation_off);
         Ok(self.source.pread_with(annotation_off as usize, self)?)
     }
 
     pub(crate) fn get_annotation_set_item(
         &self,
         annotation_set_item_off: uint,
-    ) -> Result<AnnotationSetItem> {
-        Ok(self
-            .source
-            .pread_with(annotation_set_item_off as usize, self)?)
+    ) -> Result<Option<AnnotationSetItem>> {
+        debug!(target: "annotation-set-item", "annotation set item offset: {}", annotation_set_item_off);
+        if annotation_set_item_off == 0 {
+            return Ok(None);
+        }
+        Ok(Some(
+            self.source
+                .pread_with(annotation_set_item_off as usize, self)?,
+        ))
     }
 
     pub(crate) fn get_annotation_set_ref_list(
@@ -521,13 +547,31 @@ where
             .pread_with(annotation_set_ref_list_off as usize, self)?)
     }
 
+    pub(crate) fn get_static_values(
+        &self,
+        static_values_off: uint,
+    ) -> Result<Option<EncodedArray>> {
+        debug!(target: "class", "static values offset: {}", static_values_off);
+        if static_values_off == 0 {
+            return Ok(None);
+        }
+        Ok(Some(
+            self.source.pread_with(static_values_off as usize, self)?,
+        ))
+    }
+
     pub(crate) fn get_annotations_directory_item(
         &self,
         annotations_directory_item_off: uint,
-    ) -> Result<AnnotationsDirectoryItem> {
-        Ok(self
-            .source
-            .pread_with(annotations_directory_item_off as usize, self)?)
+    ) -> Result<Option<AnnotationsDirectoryItem>> {
+        debug!(target: "class", "annotations directory offset: {}", annotations_directory_item_off);
+        if annotations_directory_item_off == 0 {
+            return Ok(None);
+        }
+        Ok(Some(self.source.pread_with(
+            annotations_directory_item_off as usize,
+            self,
+        )?))
     }
 
     pub(crate) fn get_debug_info_item(&self, debug_info_off: uint) -> Result<DebugInfoItem> {
@@ -545,7 +589,7 @@ impl DexReader {
         let inner: DexInner = map.pread(0)?;
         let endian = inner.get_endian();
         let source = Source::new(map);
-        let cache = StringCache::new(
+        let cache = Strings::new(
             source.clone(),
             endian,
             inner.strings_offset(),
@@ -554,7 +598,7 @@ impl DexReader {
         );
         Ok(Dex {
             source: source.clone(),
-            string_cache: cache,
+            strings: cache,
             inner,
         })
     }

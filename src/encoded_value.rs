@@ -96,6 +96,7 @@ where
         let value_type = 0b0001_1111 & header;
         let value_type = ValueType::from_u8(value_type)
             .ok_or_else(|| Error::InvalidId(format!("Invalid value type {}", value_type)))?;
+        debug!(target: "encoded-value", "encoded value type: {:?}", value_type);
         let value = match value_type {
             ValueType::Byte => {
                 debug_assert_eq!(value_arg, 0);
@@ -152,8 +153,8 @@ where
             }
             ValueType::Method => {
                 debug_assert!(value_arg < 4);
-                let index = try_zero_extended_gread!(source, offset, value_arg, 4);
-                EncodedValue::Method(dex.get_method_item(index)?)
+                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                EncodedValue::Method(dex.get_method_item(ulong::from(index))?)
             }
             ValueType::Enum => {
                 debug_assert!(value_arg < 4);
@@ -205,6 +206,7 @@ where
         let offset = &mut 0;
         let size = Uleb128::read(source, offset)?;
         // TODO: find out why try_gread_vec_with! doesn't work here: fails in scroll
+        debug!(target: "encoded-array", "encoded array size: {}", size);
         let mut values = Vec::with_capacity(size as usize);
         for _ in 0..size {
             values.push(source.gread_with(offset, ctx)?);

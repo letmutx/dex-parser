@@ -34,6 +34,7 @@ where
         let type_idx = Uleb128::read(source, offset)?;
         let type_idx = type_idx as TypeId;
         let size = Uleb128::read(source, offset)?;
+        debug!(target: "encoded-annotation", "type: {}, size: {}", type_idx, size);
         let elements = try_gread_vec_with!(source, offset, size, ctx);
         Ok((Self { type_idx, elements }, *offset))
     }
@@ -60,6 +61,7 @@ where
         let offset = &mut 0;
         let name_idx = Uleb128::read(source, offset)?;
         let name_idx = name_idx as StringId;
+        debug!(target: "annotation-element", "annotation element: {}", name_idx);
         let value = source.gread_with(offset, ctx)?;
         Ok((Self { name_idx, value }, *offset))
     }
@@ -89,8 +91,9 @@ where
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let visibility: ubyte = source.gread_with(offset, ctx.get_endian())?;
-        let visibility: Visibility =
-            FromPrimitive::from_u8(visibility).expect("Invalid visibility in annotation");
+        debug!(target: "annotation-item", "visibility: {:?}", visibility);
+        let visibility: Visibility = FromPrimitive::from_u8(visibility)
+            .ok_or_else(|| Error::InvalidId("Invalid visibility for annotation".to_owned()))?;
         let annotation = source.gread_with(offset, ctx)?;
         Ok((
             Self {
@@ -119,6 +122,7 @@ where
         let offset = &mut 0;
         let endian = ctx.get_endian();
         let size: uint = source.gread_with(offset, endian)?;
+        debug!(target: "annotation-set-ref-list", "annotation set ref list size: {}", size);
         let annotation_ref_items: Vec<uint> = try_gread_vec_with!(source, offset, size, endian);
         Ok((
             Self {
@@ -126,6 +130,7 @@ where
                     .iter()
                     .map(|annotation_set_item_off| {
                         ctx.get_annotation_set_item(*annotation_set_item_off)
+                            .map(|annotation| annotation.expect("ref set list shouldn't be none"))
                     })
                     .collect::<super::Result<_>>()?,
             },
@@ -151,6 +156,7 @@ where
         let offset = &mut 0;
         let endian = ctx.get_endian();
         let size: uint = source.gread_with(offset, endian)?;
+        debug!(target: "annotation-set-item", "annotation set items size: {}", size);
         let annotation_items_offs: Vec<uint> = try_gread_vec_with!(source, offset, size, endian);
         Ok((
             Self {
@@ -185,6 +191,7 @@ where
         let endian = ctx.get_endian();
         let method_idx: uint = source.gread_with(offset, endian)?;
         let annotation_set_ref_list_off: uint = source.gread_with(offset, endian)?;
+        debug!(target: "parameter-annotation", "annotation set ref list offset: {}", annotation_set_ref_list_off);
         Ok((
             Self {
                 method_idx: MethodId::from(method_idx),
@@ -214,10 +221,13 @@ where
         let offset = &mut 0;
         let method_idx: uint = source.gread_with(offset, ctx.get_endian())?;
         let annotation_set_item_off: uint = source.gread_with(offset, ctx.get_endian())?;
+        debug!(target: "method-annotation", "annotation set item offset: {}", annotation_set_item_off);
         Ok((
             Self {
                 method_idx: MethodId::from(method_idx),
-                annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
+                annotations: ctx
+                    .get_annotation_set_item(annotation_set_item_off)?
+                    .expect("Method annotation shouldn't be none"),
             },
             *offset,
         ))
@@ -243,10 +253,13 @@ where
         let offset = &mut 0;
         let field_idx: uint = source.gread_with(offset, ctx.get_endian())?;
         let annotation_set_item_off: uint = source.gread_with(offset, ctx.get_endian())?;
+        debug!(target: "field-annotation", "annotation set item offset: {}", annotation_set_item_off);
         Ok((
             Self {
                 field_idx: FieldId::from(field_idx),
-                annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
+                annotations: ctx
+                    .get_annotation_set_item(annotation_set_item_off)?
+                    .expect("Annotation offset must not 0"),
             },
             *offset,
         ))
@@ -276,11 +289,9 @@ where
         let fields_size: uint = source.gread_with(offset, endian)?;
         let annotated_method_size: uint = source.gread_with(offset, endian)?;
         let annotated_parameters_size: uint = source.gread_with(offset, endian)?;
-        let class_annotations = if class_annotations_off != 0 {
-            Some(ctx.get_annotation_set_item(class_annotations_off)?)
-        } else {
-            None
-        };
+        debug!(target: "annotations directory", "fields size: {}, annotated method size: {}, annotated params size: {}",
+            fields_size, annotated_method_size, annotated_parameters_size);
+        let class_annotations = ctx.get_annotation_set_item(class_annotations_off)?;
         let field_annotations = if fields_size != 0 {
             Some(try_gread_vec_with!(source, offset, fields_size, ctx))
         } else {

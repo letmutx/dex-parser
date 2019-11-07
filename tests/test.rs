@@ -75,13 +75,13 @@ macro_rules! test {
     ($test_name: ident, $({ $fname:expr => $code:expr }),+,$test_func:expr) => {
         #[test]
         fn $test_name() {
-            use dex_parser::DexBuilder;
+            use dex_parser::DexReader;
             let mut builder = TestBuilder::new();
             $(
                builder.add_src($fname, $code);
             )*
             let dex_path = builder.compile();
-            let dex = DexBuilder::from_file(dex_path.as_path());
+            let dex = DexReader::from_file(dex_path.as_path());
             assert!(dex.is_ok());
             $test_func(dex.unwrap());
         }

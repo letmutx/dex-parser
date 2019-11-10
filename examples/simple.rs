@@ -3,8 +3,12 @@ use dex::DexReader;
 use std::io;
 
 fn main() -> io::Result<()> {
+    env_logger::init();
     let dex = DexReader::from_file("resources/classes.dex").unwrap();
-    let s = dex.get_string(2).unwrap();
-    println!("string: {:?}", s);
+    let class = dex
+        .find_class_by_name("La/a/a/a/d;")
+        .expect("Failed to load class")
+        .expect("class not found");
+    println!("class type: {}", class.jtype());
     Ok(())
 }

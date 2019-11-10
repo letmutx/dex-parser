@@ -75,7 +75,7 @@ macro_rules! test {
     ($test_name: ident, $({ $fname:expr => $code:expr }),+,$test_func:expr) => {
         #[test]
         fn $test_name() {
-            use dex_parser::DexReader;
+            use dex::DexReader;
             let mut builder = TestBuilder::new();
             $(
                builder.add_src($fname, $code);
@@ -114,7 +114,7 @@ test!(
             class Test {}
         "#
     },
-    |dex: dex_parser::Dex<_>| {
+    |dex: dex::Dex<_>| {
         let len = dex.strings().count();
         assert_eq!(len, 6);
     }

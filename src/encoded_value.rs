@@ -89,6 +89,7 @@ where
     type Error = Error;
     type Size = usize;
 
+    #[allow(clippy::cognitive_complexity)]
     fn try_from_ctx(source: &'a [u8], dex: &super::Dex<S>) -> Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let header: ubyte = source.gread(offset)?;

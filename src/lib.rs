@@ -1,3 +1,6 @@
+// Silence warnings in error module for now
+#![allow(bare_trait_objects)]
+
 #[macro_use]
 extern crate scroll_derive;
 

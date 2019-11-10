@@ -37,7 +37,7 @@ where
     F: Fn(T) -> super::Result<U>,
     T: EncodedItem,
 {
-    array.map(|array| array.into_iter().map(f).collect())
+    array.map(|array| array.iter().map(f).collect())
 }
 
 macro_rules! try_from_item {
@@ -55,7 +55,7 @@ where
     S: AsRef<[u8]>,
 {
     type_ids
-        .into_iter()
+        .iter()
         .map(|type_id| dex.get_type(uint::from(*type_id)))
         .collect()
 }

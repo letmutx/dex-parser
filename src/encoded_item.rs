@@ -20,7 +20,7 @@ pub(crate) struct EncodedItemArray<T> {
 }
 
 impl<T: EncodedItem> EncodedItemArray<T> {
-    pub(crate) fn into_iter(self) -> impl Iterator<Item = T> {
+    pub(crate) fn iter(self) -> impl Iterator<Item = T> {
         self.inner.into_iter()
     }
 }

@@ -27,7 +27,7 @@ impl<'a> Section<'a> {
         F: Fn(&T, &S) -> Result<Ordering>,
         T: ctx::TryFromCtx<'a, C, Size = usize, Error = scroll::Error> + Debug,
     {
-        if self.inner.len() == 0 {
+        if self.inner.is_empty() {
             return Ok(None);
         }
         // Figure out the size of one item, all items must be of fixed size
@@ -66,6 +66,6 @@ impl<'a> Section<'a> {
 
 impl<'a> AsRef<[u8]> for Section<'a> {
     fn as_ref(&self) -> &[u8] {
-        self.inner.as_ref()
+        self.inner
     }
 }

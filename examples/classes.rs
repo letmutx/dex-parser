@@ -1,6 +1,6 @@
 use std::io;
 
-use dex_parser::DexReader;
+use dex::DexReader;
 
 fn main() -> io::Result<()> {
     env_logger::init();

@@ -1,4 +1,4 @@
-use dex_parser::DexReader;
+use dex::DexReader;
 
 use std::io;
 
@@ -9,6 +9,6 @@ fn main() -> io::Result<()> {
         .find_class_by_name("La/a/a/a/d;")
         .expect("Failed to load class")
         .expect("class not found");
-    let static_fields = class.static_fields();
+    println!("class type: {}", class.jtype());
     Ok(())
 }

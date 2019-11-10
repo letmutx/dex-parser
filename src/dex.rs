@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use getset::{CopyGetters, Getters};
 use memmap::Mmap;
 use memmap::MmapOptions;
 use num_derive::FromPrimitive;
@@ -49,8 +50,9 @@ use crate::{ENDIAN_CONSTANT, NO_INDEX, REVERSE_ENDIAN_CONSTANT};
 use std::path::Path;
 
 /// Dex file header
-#[derive(Debug, Pread)]
-struct Header {
+#[derive(Debug, Pread, CopyGetters)]
+#[get_copy = "pub"]
+pub struct Header {
     /// Magic value that must appear at the beginning of the header section
     /// Contains dex\n<version>\0
     magic: [ubyte; 8],
@@ -112,19 +114,19 @@ struct Header {
 }
 
 /// Wrapper type for Dex
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub(crate) struct DexInner {
     /// The header
+    #[get = "pub"]
     header: Header,
+    /// Contents of the map_list section
+    #[get = "pub"]
     map_list: MapList,
+    #[get_copy = "pub"]
     endian: Endian,
 }
 
 impl DexInner {
-    pub(crate) fn get_endian(&self) -> Endian {
-        self.endian
-    }
-
     pub(crate) fn strings_offset(&self) -> uint {
         self.header.string_ids_off
     }
@@ -216,7 +218,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
 /// List of the entire contents of a file, in order. A given type must appear at most
 /// once in a map, entries must be ordered by initial offset and must not overlap.
 #[derive(Debug)]
-struct MapList {
+pub(crate) struct MapList {
     map_items: Vec<MapItem>,
 }
 
@@ -363,7 +365,7 @@ where
     }
 
     pub(crate) fn get_type_id(&self, string_id: StringId) -> Result<Option<TypeId>> {
-        let types_section = self.get_type_ids_section();
+        let types_section = self.type_ids_section();
         Ok(types_section
             .binary_search(
                 &string_id,
@@ -373,7 +375,7 @@ where
             .map(|s| s as TypeId))
     }
 
-    pub(crate) fn get_type_ids_section(&self) -> Section {
+    pub(crate) fn type_ids_section(&self) -> Section {
         let type_ids_offset = self.inner.type_ids_offset() as usize;
         let (start, end) = (
             type_ids_offset,
@@ -383,7 +385,7 @@ where
         Section::new(type_ids_section)
     }
 
-    pub(crate) fn get_class_defs_section(&self) -> Section {
+    pub(crate) fn class_defs_section(&self) -> Section {
         let class_defs_offset = self.inner.class_defs_offset() as usize;
         let (start, end) = (
             class_defs_offset,
@@ -393,8 +395,8 @@ where
         Section::new(class_defs_section)
     }
 
-    pub(crate) fn get_class_by_type(&self, type_id: TypeId) -> Result<Option<usize>> {
-        let class_defs_section = self.get_class_defs_section();
+    pub(crate) fn find_class_by_type(&self, type_id: TypeId) -> Result<Option<usize>> {
+        let class_defs_section = self.class_defs_section();
         Ok(class_defs_section.binary_search(
             &type_id,
             self.get_endian(),
@@ -405,7 +407,7 @@ where
     /// Finds `Class` by the given class name. The name should be in smali format.
     /// This method uses binary search to find the class definition using the property
     /// that the strings, type ids and class defs sections are in sorted.
-    pub fn get_class_by_name(&self, type_descriptor: &str) -> Result<Option<Class>> {
+    pub fn find_class_by_name(&self, type_descriptor: &str) -> Result<Option<Class>> {
         let string_id = self.strings.get_id(type_descriptor)?;
         if string_id.is_none() {
             debug!(target: "find-class-by-name", "class name: {} not found in strings", type_descriptor);
@@ -416,13 +418,13 @@ where
             debug!(target: "find-class-by-name", "no type id found for string id: {}", string_id.unwrap());
             return Ok(None);
         }
-        let class_def_item_id = self.get_class_by_type(type_id.unwrap())?;
+        let class_def_item_id = self.find_class_by_type(type_id.unwrap())?;
         if class_def_item_id.is_none() {
             debug!(target: "find-class-by-name", "type id is not a class: {}", type_id.unwrap());
             return Ok(None);
         }
         let class_def = self
-            .get_class_defs_section()
+            .class_defs_section()
             .as_ref()
             .pread_with(class_def_item_id.unwrap() * 32, self.get_endian())?;
         Ok(Some(Class::try_from_dex(self, &class_def)?))
@@ -526,7 +528,7 @@ where
     }
 
     pub(crate) fn get_endian(&self) -> Endian {
-        self.inner.get_endian()
+        self.inner.endian()
     }
 
     pub(crate) fn class_defs(&self) -> impl Iterator<Item = Result<ClassDefItem>> + '_ {
@@ -619,7 +621,7 @@ impl DexReader {
     pub fn from_file<P: AsRef<Path>>(file: P) -> Result<Dex<Mmap>> {
         let map = unsafe { MmapOptions::new().map(&File::open(file.as_ref())?)? };
         let inner: DexInner = map.pread(0)?;
-        let endian = inner.get_endian();
+        let endian = inner.endian();
         let source = Source::new(map);
         let cache = Strings::new(
             source.clone(),
@@ -640,10 +642,10 @@ impl DexReader {
 mod tests {
 
     #[test]
-    fn test_get_class_by_name() {
+    fn test_find_class_by_name() {
         let dex =
             super::DexReader::from_file("resources/classes.dex").expect("cannot open dex file");
-        let class = dex.get_class_by_name("La/a/a/a/d;");
+        let class = dex.find_class_by_name("La/a/a/a/d;");
         assert!(class.is_ok());
         assert!(class.unwrap().is_some());
     }

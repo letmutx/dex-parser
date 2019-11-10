@@ -1,3 +1,4 @@
+use getset::{CopyGetters, Getters};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use scroll::ctx;
@@ -20,24 +21,30 @@ use crate::ushort;
 use crate::utils;
 use crate::MethodAccessFlags;
 
-// TODO: add accessor methods
 /// Represents a class method.
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct Method {
     /// Parent class of the method.
+    #[get = "pub"]
     class: Type,
     /// Name of the method.
+    #[get = "pub"]
     name: Ref<JString>,
     /// Access flags of the method.
+    #[get_copy = "pub"]
     access_flags: MethodAccessFlags,
     /// Types of the parameters of the method.
+    #[get = "pub"]
     params: Option<Vec<Type>>,
     /// Shorty descriptor of the method. Conforms to
     /// https://source.android.com/devices/tech/dalvik/dex-format#shortydescriptor
+    #[get = "pub"]
     shorty: Ref<JString>,
     /// Return type of the method.
+    #[get = "pub"]
     return_type: Type,
     /// Code and DebugInfo of the method.
+    #[get = "pub"]
     code: Option<CodeItem>,
 }
 
@@ -126,15 +133,16 @@ impl MethodIdItem {
 pub type MethodId = ulong;
 
 /// https://source.android.com/devices/tech/dalvik/dex-format#encoded-method
-#[derive(Debug)]
+#[derive(Debug, CopyGetters)]
 pub(crate) struct EncodedMethod {
+    #[get_copy = "pub(crate)"]
     pub(crate) method_id: MethodId,
     access_flags: ulong,
     code_offset: ulong,
 }
 
 impl EncodedItem for EncodedMethod {
-    fn get_id(&self) -> ulong {
+    fn id(&self) -> ulong {
         self.method_id
     }
 }

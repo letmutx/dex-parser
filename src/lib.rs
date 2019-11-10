@@ -7,6 +7,8 @@ extern crate bitflags;
 #[macro_use]
 extern crate log;
 
+extern crate getset;
+
 use scroll;
 
 pub use error::Error;

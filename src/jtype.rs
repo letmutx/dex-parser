@@ -1,6 +1,8 @@
 use std::clone::Clone;
 use std::fmt;
 
+use getset::{CopyGetters, Getters};
+
 use crate::cache::Ref;
 use crate::string::JString;
 use crate::uint;
@@ -10,10 +12,12 @@ pub type TypeId = uint;
 // TODO: add new function
 /// Represents a java type. The type descriptor conforms to
 /// https://source.android.com/devices/tech/dalvik/dex-format#typedescriptor
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct Type {
+    #[get_copy = "pub"]
     pub(crate) id: TypeId,
     /// The type descriptor string for this string.
+    #[get = "pub"]
     pub(crate) type_descriptor: Ref<JString>,
 }
 

@@ -12,7 +12,7 @@ use crate::ulong;
 use crate::ushort;
 
 pub(crate) trait EncodedItem {
-    fn get_id(&self) -> ulong;
+    fn id(&self) -> ulong;
 }
 
 pub(crate) struct EncodedItemArray<T> {
@@ -65,7 +65,7 @@ where
         let mut inner = Vec::with_capacity(len);
         for _ in 0..len {
             let encoded_item: T = source.gread_with(offset, prev)?;
-            prev = encoded_item.get_id();
+            prev = encoded_item.id();
             inner.push(encoded_item);
         }
         Ok((EncodedItemArray { inner }, *offset))

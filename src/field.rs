@@ -12,18 +12,22 @@ use crate::uint;
 use crate::ulong;
 use crate::ushort;
 use crate::FieldAccessFlags;
+use getset::{CopyGetters, Getters};
 
-// TODO: add accessor methods
 /// Represents the field of a class
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct Field {
     /// Name of the field.
+    #[get = "pub"]
     name: Ref<JString>,
     /// Type of the field.
+    #[get = "pub"]
     jtype: Type,
     /// Class which this field belongs to.
+    #[get_copy = "pub"]
     class: ClassId,
     /// Access flags for the field.
+    #[get_copy = "pub"]
     access_flags: FieldAccessFlags,
 }
 
@@ -81,7 +85,7 @@ pub(crate) struct EncodedField {
 }
 
 impl EncodedItem for EncodedField {
-    fn get_id(&self) -> ulong {
+    fn id(&self) -> ulong {
         self.field_id
     }
 }

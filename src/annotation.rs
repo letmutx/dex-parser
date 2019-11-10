@@ -2,6 +2,8 @@ use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
 
+use getset::{CopyGetters, Getters};
+
 use crate::encoded_value::EncodedValue;
 use crate::error::Error;
 use crate::field::FieldId;
@@ -14,11 +16,13 @@ use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
 /// Annotation
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct EncodedAnnotation {
     /// Type of the annotation. Should be a class type.
+    #[get_copy = "pub"]
     type_idx: TypeId,
     /// Elements of the annotation
+    #[get = "pub"]
     elements: Vec<AnnotationElement>,
 }
 
@@ -41,12 +45,14 @@ where
 }
 
 /// https://source.android.com/devices/tech/dalvik/dex-format#annotation-element
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct AnnotationElement {
     /// Name of the element. Should conform to
     /// https://source.android.com/devices/tech/dalvik/dex-format#membername
+    #[get_copy = "pub"]
     name_idx: StringId,
     /// Value corresponding to the name.
+    #[get = "pub"]
     value: EncodedValue,
 }
 
@@ -67,7 +73,7 @@ where
     }
 }
 
-#[derive(Debug, FromPrimitive)]
+#[derive(Debug, FromPrimitive, Copy, Clone)]
 pub enum Visibility {
     Build = 0x0,
     Runtime = 0x1,
@@ -75,9 +81,11 @@ pub enum Visibility {
 }
 
 /// https://source.android.com/devices/tech/dalvik/dex-format#annotation-item
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct AnnotationItem {
+    #[get_copy = "pub"]
     visibility: Visibility,
+    #[get = "pub"]
     annotation: EncodedAnnotation,
 }
 
@@ -106,7 +114,8 @@ where
 }
 
 /// https://source.android.com/devices/tech/dalvik/dex-format#set-ref-list
-#[derive(Debug)]
+#[derive(Debug, Getters)]
+#[get = "pub"]
 pub struct AnnotationSetRefList {
     annotation_set_list: Vec<AnnotationSetItem>,
 }
@@ -140,7 +149,8 @@ where
 }
 
 /// A set of annotations.
-#[derive(Debug)]
+#[derive(Debug, Getters)]
+#[get = "pub"]
 pub struct AnnotationSetItem {
     annotations: Vec<AnnotationItem>,
 }
@@ -171,11 +181,13 @@ where
 }
 
 /// Annotations of a method's parameters.
-#[derive(Debug)]
-struct ParameterAnnotation {
+#[derive(Debug, Getters, CopyGetters)]
+pub struct ParameterAnnotation {
     /// The method this parameter belongs to.
+    #[get_copy = "pub"]
     method_idx: MethodId,
     /// The list of annotation sets for the parameters.
+    #[get = "pub"]
     annotations: AnnotationSetRefList,
 }
 
@@ -204,9 +216,11 @@ where
 
 /// Annotations of a method.
 /// https://source.android.com/devices/tech/dalvik/dex-format#method-annotation
-#[derive(Debug)]
-struct MethodAnnotation {
+#[derive(Debug, Getters, CopyGetters)]
+pub struct MethodAnnotation {
+    #[get_copy = "pub"]
     method_idx: MethodId,
+    #[get = "pub"]
     annotations: AnnotationSetItem,
 }
 
@@ -236,9 +250,11 @@ where
 
 /// Annotations of a field.
 /// https://source.android.com/devices/tech/dalvik/dex-format#field-annotation
-#[derive(Debug)]
-struct FieldAnnotation {
+#[derive(Debug, Getters, CopyGetters)]
+pub struct FieldAnnotation {
+    #[get_copy = "pub"]
     field_idx: FieldId,
+    #[get = "pub"]
     annotations: AnnotationSetItem,
 }
 
@@ -267,8 +283,9 @@ where
 }
 
 /// Annotations of class, fields, methods and parameters of a class.
-#[derive(Debug)]
-pub(crate) struct AnnotationsDirectoryItem {
+#[derive(Debug, Getters)]
+#[get = "pub"]
+pub struct AnnotationsDirectoryItem {
     class_annotations: Option<AnnotationSetItem>,
     field_annotations: Option<Vec<FieldAnnotation>>,
     method_annotations: Option<Vec<MethodAnnotation>>,

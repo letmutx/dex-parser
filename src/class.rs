@@ -1,5 +1,6 @@
 use std::clone::Clone;
 
+use getset::{CopyGetters, Getters};
 use scroll::ctx;
 use scroll::{Pread, Uleb128};
 
@@ -20,37 +21,48 @@ use crate::ClassAccessFlags;
 
 pub type ClassId = uint;
 
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct Class {
     /// Index into type_ids. TypeId should refer to a class type.
+    #[get_copy = "pub"]
     pub(crate) id: ClassId,
     /// Type of this class.
+    #[get = "pub"]
     pub(crate) jtype: Type,
     /// Access flags for the class (public, final etc.)
     /// https://source.android.com/devices/tech/dalvik/dex-format#access-flags
+    #[get_copy = "pub"]
     pub(crate) access_flags: ClassAccessFlags,
     /// Index into the type_ids for the super class, if there is one.
+    #[get_copy = "pub"]
     pub(crate) super_class: Option<ClassId>,
     /// List of the interfaces implemented by this class.
+    #[get = "pub"]
     pub(crate) interfaces: Option<Vec<Type>>,
     /// Annotations of the class, fields, methods and their parameters.
+    #[get = "pub"]
     pub(crate) annotations: Option<AnnotationsDirectoryItem>,
     /// The file in which this class is found in the source code.
+    #[get = "pub"]
     pub(crate) source_file: Option<Ref<JString>>,
     /// Static fields defined in the class.
+    #[get = "pub"]
     pub(crate) static_fields: Option<Vec<Field>>,
     /// Instance fields defined in the class.
+    #[get = "pub"]
     pub(crate) instance_fields: Option<Vec<Field>>,
     /// List of static, private methods and constructors defined in the class.
+    #[get = "pub"]
     pub(crate) direct_methods: Option<Vec<Method>>,
     /// List of parent class methods overriden by this class.
+    #[get = "pub"]
     pub(crate) virtual_methods: Option<Vec<Method>>,
     /// Values of the static fields in the same order as static fields.
     /// Other static fields assume `0` or `null` values.
+    #[get = "pub"]
     pub(crate) static_values: Option<EncodedArray>,
 }
 
-// TODO: add accessor methods for all fields
 impl Class {
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
@@ -107,10 +119,6 @@ impl Class {
             virtual_methods,
             static_values,
         })
-    }
-
-    pub fn get_type(&self) -> Type {
-        self.jtype.clone()
     }
 }
 

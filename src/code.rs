@@ -2,6 +2,8 @@ use scroll::ctx;
 use scroll::{Pread, Uleb128};
 use std::fmt;
 
+use getset::{CopyGetters, Getters};
+
 use crate::cache::Ref;
 use crate::encoded_item::EncodedCatchHandlers;
 use crate::error::Error;
@@ -13,26 +15,35 @@ use crate::ushort;
 
 /// Debug Info of a method.
 /// https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct DebugInfoItem {
+    #[get_copy = "pub"]
     line_start: usize,
+    #[get = "pub"]
     parameter_names: Vec<Option<Ref<JString>>>,
 }
 
 /// Code and Debug Info of a method.
+#[derive(Getters, CopyGetters)]
 pub struct CodeItem {
     /// The number of registers the method must use.
-    pub registers_size: ushort,
+    #[get_copy = "pub"]
+    registers_size: ushort,
     /// Line number and source file information.
-    pub debug_info_item: Option<DebugInfoItem>,
+    #[get = "pub"]
+    debug_info_item: Option<DebugInfoItem>,
     /// Number of words for incoming arguments to this method.
-    pub ins_size: ushort,
+    #[get_copy = "pub"]
+    ins_size: ushort,
     /// Number of words for outgoing arguments required for invocation.
-    pub outs_size: ushort,
+    #[get_copy = "pub"]
+    outs_size: ushort,
     /// Code instructions for this method.
-    pub insns: Vec<ushort>,
+    #[get = "pub"]
+    insns: Vec<ushort>,
     /// Try, Exception handling information of this method.
-    pub tries: Option<Tries>,
+    #[get = "pub"]
+    tries: Option<Tries>,
 }
 
 impl fmt::Debug for CodeItem {
@@ -43,13 +54,16 @@ impl fmt::Debug for CodeItem {
 }
 
 /// Represents a Try-Catch block
-#[derive(Pread, Clone, Copy, Debug)]
+#[derive(Pread, Clone, Copy, Debug, Getters, CopyGetters)]
 pub(crate) struct TryItem {
     /// The instruction at which the try block starts.
+    #[get_copy = "pub"]
     start_addr: uint,
     /// Number of instructions the try block covers.
+    #[get_copy = "pub"]
     insn_count: ushort,
     /// Exception handler offset.
+    #[get_copy = "pub"]
     handler_off: ushort,
 }
 
@@ -61,29 +75,35 @@ pub enum ExceptionType {
     Ty(Type),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Getters, CopyGetters)]
 pub struct CatchHandler {
     /// Type of the exception handled by this handler.
+    #[get = "pub"]
     pub(crate) exception: ExceptionType,
     /// Start address of the catch handler.
+    #[get_copy = "pub"]
     pub(crate) addr: ulong,
 }
 
 /// Represents Try and catch blocks.
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct TryCatchHandlers {
     /// Start of the try block.
+    #[get_copy = "pub"]
     start_addr: uint,
     /// Number of instructions covered by this try block.
+    #[get_copy = "pub"]
     insn_count: ushort,
-    /// List fo catch handlers for this try block.
+    /// List of catch handlers for this try block.
+    #[get = "pub"]
     catch_handlers: Vec<CatchHandler>,
 }
 
 /// List of try-catch blocks found in this method.
-#[derive(Debug)]
+#[derive(Debug, Getters, CopyGetters)]
 pub struct Tries {
-    inner: Vec<TryCatchHandlers>,
+    #[get = "pub"]
+    try_catch_blocks: Vec<TryCatchHandlers>,
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, (usize, &super::Dex<S>)> for Tries
@@ -115,7 +135,12 @@ where
                 })
             })
             .collect();
-        Ok((Self { inner: tries? }, *offset))
+        Ok((
+            Self {
+                try_catch_blocks: tries?,
+            },
+            *offset,
+        ))
     }
 }
 

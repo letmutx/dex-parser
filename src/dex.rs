@@ -280,7 +280,6 @@ pub enum ItemType {
     AnnotationsDirectoryItem = 0x2006,
 }
 
-///
 #[derive(Debug, Clone, Copy)]
 struct MapItem {
     /// Type of the current item

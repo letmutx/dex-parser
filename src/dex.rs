@@ -16,7 +16,6 @@ use crate::class::Class;
 use crate::class::ClassDataItem;
 use crate::class::ClassDefItem;
 use crate::class::ClassDefItemIter;
-use crate::class::ClassId;
 use crate::code::{CodeItem, DebugInfoItem};
 use crate::encoded_value::EncodedArray;
 use crate::error;
@@ -34,6 +33,7 @@ use crate::method::MethodId;
 use crate::method::MethodIdItem;
 use crate::method::ProtoId;
 use crate::method::ProtoIdItem;
+use crate::search::Section;
 use crate::source::Source;
 use crate::string::JString;
 use crate::string::StringId;
@@ -362,38 +362,70 @@ where
         })
     }
 
-    fn find_class<F: Fn(&ClassDefItem) -> Result<bool>>(
-        &self,
-        predicate: F,
-    ) -> Result<Option<Class>> {
-        for class_def in self.class_defs() {
-            let class_def = class_def?;
-            if predicate(&class_def)? {
-                return Ok(Some(Class::try_from_dex(self, &class_def)?));
-            }
-        }
-        Ok(None)
+    pub(crate) fn get_type_id(&self, string_id: StringId) -> Result<Option<TypeId>> {
+        let types_section = self.get_type_ids_section();
+        Ok(types_section
+            .binary_search(
+                &string_id,
+                self.get_endian(),
+                |value: &StringId, element| Ok((element).cmp(value)),
+            )?
+            .map(|s| s as TypeId))
     }
 
-    /// Returns the `Class` represented by the given class_id.
-    pub fn get_class(&self, class_id: ClassId) -> Result<Option<Class>> {
-        self.find_class(|class_def| Ok(class_def.class_idx == class_id))
+    pub(crate) fn get_type_ids_section(&self) -> Section {
+        let type_ids_offset = self.inner.type_ids_offset() as usize;
+        let (start, end) = (
+            type_ids_offset,
+            type_ids_offset + self.inner.type_ids_len() as usize * 4,
+        );
+        let type_ids_section = &self.source[start..end];
+        Section::new(type_ids_section)
     }
 
-    /// Returns the `Class` represented by the given type.
-    pub fn get_class_by_type(&self, jtype: &Type) -> Result<Option<Class>> {
-        self.find_class(|class_def| {
-            let class_type = self.get_type(class_def.class_idx)?;
-            Ok(*jtype == class_type)
-        })
+    pub(crate) fn get_class_defs_section(&self) -> Section {
+        let class_defs_offset = self.inner.class_defs_offset() as usize;
+        let (start, end) = (
+            class_defs_offset,
+            class_defs_offset + self.inner.class_defs_len() as usize * 32,
+        );
+        let class_defs_section = &self.source[start..end];
+        Section::new(class_defs_section)
     }
 
-    pub fn get_class_by_name(&self, class_name: &str) -> Result<Option<Class>> {
-        let string_id = self.strings.get_id(class_name)?;
+    pub(crate) fn get_class_by_type(&self, type_id: TypeId) -> Result<Option<usize>> {
+        let class_defs_section = self.get_class_defs_section();
+        Ok(class_defs_section.binary_search(
+            &type_id,
+            self.get_endian(),
+            |class_def: &ClassDefItem, type_id: &TypeId| Ok(type_id.cmp(&class_def.class_idx)),
+        )?)
+    }
+
+    /// Finds `Class` by the given class name. The name should be in smali format.
+    /// This method uses binary search to find the class definition using the property
+    /// that the strings, type ids and class defs sections are in sorted.
+    pub fn get_class_by_name(&self, type_descriptor: &str) -> Result<Option<Class>> {
+        let string_id = self.strings.get_id(type_descriptor)?;
         if string_id.is_none() {
+            debug!(target: "find-class-by-name", "class name: {} not found in strings", type_descriptor);
             return Ok(None);
         }
-        unimplemented!()
+        let type_id = self.get_type_id(string_id.unwrap())?;
+        if type_id.is_none() {
+            debug!(target: "find-class-by-name", "no type id found for string id: {}", string_id.unwrap());
+            return Ok(None);
+        }
+        let class_def_item_id = self.get_class_by_type(type_id.unwrap())?;
+        if class_def_item_id.is_none() {
+            debug!(target: "find-class-by-name", "type id is not a class: {}", type_id.unwrap());
+            return Ok(None);
+        }
+        let class_def = self
+            .get_class_defs_section()
+            .as_ref()
+            .pread_with(class_def_item_id.unwrap() * 32, self.get_endian())?;
+        Ok(Some(Class::try_from_dex(self, &class_def)?))
     }
 
     pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Option<Vec<Type>>> {
@@ -508,7 +540,7 @@ where
     /// Iterator over the classes
     pub fn classes(&self) -> impl Iterator<Item = Result<Class>> + '_ {
         self.class_defs()
-            .map(move |class_def_item| Ok(Class::try_from_dex(&self, &class_def_item?).unwrap()))
+            .map(move |class_def_item| Class::try_from_dex(&self, &class_def_item?))
     }
 
     pub(crate) fn get_code_item(&self, code_off: ulong) -> Result<Option<CodeItem>> {
@@ -601,5 +633,18 @@ impl DexReader {
             strings: cache,
             inner,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test_get_class_by_name() {
+        let dex =
+            super::DexReader::from_file("resources/classes.dex").expect("cannot open dex file");
+        let class = dex.get_class_by_name("La/a/a/a/d;");
+        assert!(class.is_ok());
+        assert!(class.unwrap().is_some());
     }
 }

@@ -27,6 +27,7 @@ mod error;
 mod field;
 mod jtype;
 mod method;
+mod search;
 mod source;
 mod string;
 

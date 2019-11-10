@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::convert::AsRef;
 use std::convert::Into;
 use std::fmt;
@@ -128,39 +127,25 @@ where
         }
     }
 
-    fn get_string_bytes(&self, index: usize, len: usize) -> Result<&[u8]> {
-        let offset = self.offset as usize + index * std::mem::size_of::<StringId>();
-        let data_offset: uint = self.source.pread_with(offset, self.endian)?;
-        let mut data_offset = data_offset as usize;
-        let _ = Uleb128::read(self.source.as_ref(), &mut data_offset)?;
-        Ok(&self.source[data_offset as usize..data_offset as usize + len])
-    }
-
     pub(crate) fn get_id(&self, string: &str) -> Result<Option<StringId>> {
-        if self.len == 0 {
-            return Ok(None);
-        }
+        use crate::search::Section;
         let java_string = to_java_cesu8(string);
-        let cmp = |cache: &Self, index| -> Result<_> {
-            let string = cache.get_string_bytes(index, java_string.len())?;
-            Ok((*java_string).cmp(string))
-        };
-
-        let (mut start, mut end) = (0, self.len as usize - 1);
-        while start < end {
-            let mid = start + (end - start) / 2;
-            let result = cmp(self, mid)?;
-            match result {
-                Ordering::Equal => return Ok(Some(mid as StringId)),
-                Ordering::Less => end = mid - 1,
-                Ordering::Greater => start = mid + 1,
-            }
-        }
-        Ok(if cmp(self, start)? == Ordering::Equal {
-            Some(start as StringId)
-        } else {
-            None
-        })
+        let (offset, len) = (self.offset as usize, self.len as usize);
+        let string_section = &self.source[offset..offset + len * std::mem::size_of::<StringId>()];
+        let section = Section::new(string_section);
+        let source = self.source.clone();
+        let index = section.binary_search(
+            &java_string,
+            self.endian,
+            move |data_offset: &uint, element: &std::borrow::Cow<[u8]>| {
+                let mut data_offset = *data_offset as usize;
+                let _ = Uleb128::read(source.as_ref(), &mut data_offset)
+                    .map_err(crate::error::Error::from)?;
+                let value = &source[data_offset..data_offset + element.len()];
+                Ok((**element).cmp(value))
+            },
+        )?;
+        Ok(index.map(|i| i as StringId))
     }
 }
 
@@ -216,6 +201,14 @@ mod tests {
         let dex = crate::DexReader::from_file("resources/classes.dex").expect("failed to open dex");
         let value = dex.strings.get_id("La/a/a/a/d;");
         assert!(value.is_ok());
-        assert!(value.unwrap().is_some());
+        let value = value.unwrap();
+        assert!(value.is_some());
+        let string_id = value.unwrap();
+        assert_eq!(
+            dex.get_string(string_id)
+                .expect("string id doesn't exist")
+                .to_string(),
+            "La/a/a/a/d;"
+        );
     }
 }

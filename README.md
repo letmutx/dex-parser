@@ -16,6 +16,7 @@ The primary source of documentation for dex format is [Android website](https://
 ## Development Notes
 * The library makes use of [`mmap`](https://en.wikipedia.org/wiki/Mmap) to access the file contents.
 * [scroll](https://crates.io/crates/scroll) is used to parse binary data.
+* The included `classes.dex` in the resources folder is from the open-source application [ADW launcher](https://f-droid.org/en/packages/org.adw.launcher/). You can find the source code [here](https://f-droid.org/repo/org.adw.launcher_34_src.tar.gz)
 
 ## Contributing
 All contributions are welcome! Feel free to raise issues/PRs on Github if you find a bug, have a question or think something can be improved!

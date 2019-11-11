@@ -46,24 +46,50 @@ pub struct Class {
     #[get = "pub"]
     pub(crate) source_file: Option<Ref<JString>>,
     /// Static fields defined in the class.
-    #[get = "pub"]
-    pub(crate) static_fields: Option<Vec<Field>>,
+    pub(crate) static_fields: Vec<Field>,
     /// Instance fields defined in the class.
-    #[get = "pub"]
-    pub(crate) instance_fields: Option<Vec<Field>>,
+    pub(crate) instance_fields: Vec<Field>,
     /// List of static, private methods and constructors defined in the class.
-    #[get = "pub"]
-    pub(crate) direct_methods: Option<Vec<Method>>,
+    pub(crate) direct_methods: Vec<Method>,
     /// List of parent class methods overriden by this class.
-    #[get = "pub"]
-    pub(crate) virtual_methods: Option<Vec<Method>>,
+    pub(crate) virtual_methods: Vec<Method>,
     /// Values of the static fields in the same order as static fields.
     /// Other static fields assume `0` or `null` values.
     #[get = "pub"]
-    pub(crate) static_values: Option<EncodedArray>,
+    pub(crate) static_values: EncodedArray,
 }
 
 impl Class {
+    /// Static fields defined in the class.
+    pub fn static_fields(&self) -> impl Iterator<Item = &Field> + '_ {
+        self.static_fields.iter()
+    }
+
+    /// Instance fields defined in the class.
+    pub fn instance_fields(&self) -> impl Iterator<Item = &Field> + '_ {
+        self.instance_fields.iter()
+    }
+
+    /// List of static, private methods and constructors defined in the class.
+    pub fn direct_methods(&self) -> impl Iterator<Item = &Method> + '_ {
+        self.direct_methods.iter()
+    }
+
+    /// List of parent class methods overriden by this class.
+    pub fn virtual_methods(&self) -> impl Iterator<Item = &Method> + '_ {
+        self.virtual_methods.iter()
+    }
+
+    /// List of fields defined in this class.
+    pub fn fields(&self) -> impl Iterator<Item = &Field> + '_ {
+        self.static_fields().chain(self.instance_fields())
+    }
+
+    /// List of methods defined in this class.
+    pub fn methods(&self) -> impl Iterator<Item = &Method> + '_ {
+        self.direct_methods().chain(self.virtual_methods())
+    }
+
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
         class_def: &ClassDefItem,
@@ -87,7 +113,7 @@ impl Class {
                     try_from_item!(c.virtual_methods, em),
                 ))
             })
-            .unwrap_or_else(|| Ok::<_, Error>((None, None, None, None)))?;
+            .unwrap_or_else(|| Ok::<_, Error>((Vec::new(), Vec::new(), Vec::new(), Vec::new())))?;
 
         let static_values = dex.get_static_values(class_def.static_values_off)?;
 

@@ -580,17 +580,12 @@ where
             .pread_with(annotation_set_ref_list_off as usize, self)?)
     }
 
-    pub(crate) fn get_static_values(
-        &self,
-        static_values_off: uint,
-    ) -> Result<Option<EncodedArray>> {
+    pub(crate) fn get_static_values(&self, static_values_off: uint) -> Result<EncodedArray> {
         debug!(target: "class", "static values offset: {}", static_values_off);
         if static_values_off == 0 {
-            return Ok(None);
+            return Ok(EncodedArray::new());
         }
-        Ok(Some(
-            self.source.pread_with(static_values_off as usize, self)?,
-        ))
+        self.source.pread_with(static_values_off as usize, self)
     }
 
     pub(crate) fn get_annotations_directory_item(
@@ -612,6 +607,7 @@ where
     }
 }
 
+/// Reader facade to open a `Dex` file
 pub struct DexReader;
 
 impl DexReader {

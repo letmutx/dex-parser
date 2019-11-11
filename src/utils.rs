@@ -44,8 +44,8 @@ macro_rules! try_from_item {
     ($array:expr,$closure:expr) => {{
         use crate::utils::from_item;
         match from_item($array, $closure) {
-            Some(v) => Some(v?),
-            None => None,
+            Some(v) => v?,
+            None => Vec::new(),
         }
     }};
 }

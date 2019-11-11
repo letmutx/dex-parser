@@ -607,7 +607,7 @@ where
     }
 }
 
-/// Reader facade to open a `Dex` file
+/// Reader facade for loading a `Dex`
 pub struct DexReader;
 
 impl DexReader {

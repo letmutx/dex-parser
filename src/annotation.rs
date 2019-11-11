@@ -1,3 +1,4 @@
+//! Structures for Annotations on a `Class`, `Method`, `MethodParams` and `Field`s.
 use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
@@ -15,7 +16,8 @@ use crate::{ubyte, uint};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
-/// Annotation
+/// Contains the type and parameters of an Annotation.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoded-annotation)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct EncodedAnnotation {
     /// Type of the annotation. Should be a class type.
@@ -44,7 +46,9 @@ where
     }
 }
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#annotation-element
+/// Represents a parameter of an annotation. For example, if `@Author(name = "Benjamin Franklin")`, is
+/// the annotation, this structure represents `name = "Benjamin Franklin"`.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotation-element)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct AnnotationElement {
     /// Name of the element. Should conform to
@@ -73,18 +77,26 @@ where
     }
 }
 
+/// Visibility of an annotation.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#visibility)
 #[derive(Debug, FromPrimitive, Copy, Clone)]
 pub enum Visibility {
+    /// Visible only to the Build system.
     Build = 0x0,
+    /// Visible at the Runtime.
     Runtime = 0x1,
+    /// Visible only to the virtual machine.
     System = 0x2,
 }
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#annotation-item
+/// An Annotation along with its visibility.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotation-item)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct AnnotationItem {
+    /// Visibility of this annotation.
     #[get_copy = "pub"]
     visibility: Visibility,
+    /// Type and parameters of this annotation.
     #[get = "pub"]
     annotation: EncodedAnnotation,
 }
@@ -113,7 +125,8 @@ where
     }
 }
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#set-ref-list
+/// List of Annotation Sets. Used for method parameter annotations.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#set-ref-list)
 #[derive(Debug, Getters)]
 #[get = "pub"]
 pub struct AnnotationSetRefList {
@@ -148,7 +161,8 @@ where
     }
 }
 
-/// A set of annotations.
+/// A set of annotations on an element.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotation-set-item)
 #[derive(Debug, Getters)]
 #[get = "pub"]
 pub struct AnnotationSetItem {
@@ -180,7 +194,8 @@ where
     }
 }
 
-/// Annotations of a method's parameters.
+/// Annotations of a `Method`'s parameters.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#parameter-annotation)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct ParameterAnnotation {
     /// The method this parameter belongs to.
@@ -214,8 +229,8 @@ where
     }
 }
 
-/// Annotations of a method.
-/// https://source.android.com/devices/tech/dalvik/dex-format#method-annotation
+/// Annotations of a `Method`.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-annotation)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct MethodAnnotation {
     #[get_copy = "pub"]
@@ -248,8 +263,8 @@ where
     }
 }
 
-/// Annotations of a field.
-/// https://source.android.com/devices/tech/dalvik/dex-format#field-annotation
+/// Annotations of a `Field`.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-annotation)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct FieldAnnotation {
     #[get_copy = "pub"]
@@ -282,7 +297,8 @@ where
     }
 }
 
-/// Annotations of class, fields, methods and parameters of a class.
+/// Annotations of the fields, methods and parameters of a class and the class itself.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotations-directory)
 #[derive(Debug, Getters)]
 #[get = "pub"]
 pub struct AnnotationsDirectoryItem {

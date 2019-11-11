@@ -3,6 +3,8 @@ use scroll::Pread;
 use scroll::Sleb128;
 use scroll::Uleb128;
 
+use getset::Getters;
+
 use crate::code::CatchHandler;
 use crate::code::ExceptionType;
 use crate::error::Error;
@@ -11,11 +13,14 @@ use crate::uint;
 use crate::ulong;
 use crate::ushort;
 
-pub(crate) trait EncodedItem {
+pub trait EncodedItem {
+    /// Returns the id of the encoded item.
     fn id(&self) -> ulong;
 }
 
-pub(crate) struct EncodedItemArray<T> {
+#[derive(Getters)]
+#[get = "pub"]
+pub struct EncodedItemArray<T> {
     inner: Vec<T>,
 }
 

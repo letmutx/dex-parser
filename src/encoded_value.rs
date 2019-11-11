@@ -1,3 +1,4 @@
+//! Contains structures defining values in a `Dex`.
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use scroll::ctx;
@@ -191,6 +192,10 @@ pub struct EncodedArray {
 }
 
 impl EncodedArray {
+    pub(crate) fn new() -> Self {
+        EncodedArray { values: Vec::new() }
+    }
+
     pub(crate) fn into_inner(self) -> Vec<EncodedValue> {
         self.values
     }

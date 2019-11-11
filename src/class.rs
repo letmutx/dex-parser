@@ -1,3 +1,4 @@
+//! Dex `Class` and supporting structures.
 use std::clone::Clone;
 
 use getset::{CopyGetters, Getters};
@@ -17,23 +18,42 @@ use crate::method::Method;
 use crate::source::Source;
 use crate::string::JString;
 use crate::uint;
-use crate::ClassAccessFlags;
 
+/// `ClassId` is an index into the Types section. The corresponding `Type` denotes the type of
+/// this class. The `Type` must be a class type, not a primitive or an array.
 pub type ClassId = uint;
 
+bitflags! {
+    /// Access flags of a `Class`.
+    pub struct AccessFlags: uint {
+        const PUBLIC = 0x1;
+        const PRIVATE = 0x2;
+        const PROTECTED = 0x4;
+        const STATIC = 0x8;
+        const FINAL = 0x10;
+        const INTERFACE = 0x200;
+        const ABSTRACT = 0x400;
+        const SYNTHETIC = 0x1000;
+        const ANNOTATION = 0x2000;
+        const ENUM = 0x4000;
+    }
+}
+
+/// A `Dex` Class. This is constructed from a `ClassDefItem` and a `ClassDataItem`.
 #[derive(Debug, Getters, CopyGetters)]
 pub struct Class {
-    /// Index into type_ids. TypeId should refer to a class type.
+    /// Index into `TypeId`s. TypeId should refer to a class type.
     #[get_copy = "pub"]
     pub(crate) id: ClassId,
     /// Type of this class.
     #[get = "pub"]
     pub(crate) jtype: Type,
     /// Access flags for the class (public, final etc.)
-    /// https://source.android.com/devices/tech/dalvik/dex-format#access-flags
+    /// Check [here](https://source.android.com/devices/tech/dalvik/dex-format#access-flags) for
+    /// full reference.
     #[get_copy = "pub"]
-    pub(crate) access_flags: ClassAccessFlags,
-    /// Index into the type_ids for the super class, if there is one.
+    pub(crate) access_flags: AccessFlags,
+    /// Index into the `TypeId`s for the super class, if there is one.
     #[get_copy = "pub"]
     pub(crate) super_class: Option<ClassId>,
     /// List of the interfaces implemented by this class.
@@ -131,7 +151,7 @@ impl Class {
             jtype,
             super_class,
             interfaces: dex.get_interfaces(class_def.interfaces_off)?,
-            access_flags: ClassAccessFlags::from_bits(class_def.access_flags).ok_or_else(|| {
+            access_flags: AccessFlags::from_bits(class_def.access_flags).ok_or_else(|| {
                 Error::InvalidId(format!(
                     "Invalid Access flags in class {}",
                     class_def.class_idx
@@ -149,11 +169,17 @@ impl Class {
 }
 
 /// Contains the details about fields and methods of a class.
-/// https://source.android.com/devices/tech/dalvik/dex-format#class-data-item
-pub(crate) struct ClassDataItem {
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#class-data-item)
+#[derive(Getters)]
+#[get = "pub"]
+pub struct ClassDataItem {
+    /// The list of static fields in this class.
     static_fields: Option<EncodedFieldArray>,
+    /// The list of instance fields in this class.
     instance_fields: Option<EncodedFieldArray>,
+    /// The list of direct methods in this class.
     direct_methods: Option<EncodedMethodArray>,
+    /// Overriden methods from the super class.
     virtual_methods: Option<EncodedMethodArray>,
 }
 
@@ -186,16 +212,31 @@ where
     }
 }
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#class-def-item
-#[derive(Copy, Clone, Debug, Pread)]
-pub(crate) struct ClassDefItem {
+/// Defines the locations of the contents of a `Class`.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#class-def-item)
+#[derive(Copy, Clone, Debug, Pread, CopyGetters)]
+#[get_copy = "pub"]
+pub struct ClassDefItem {
+    /// `TypeId` of the class defined by this `ClassDefItem`
     pub(crate) class_idx: uint,
+    /// Access flags of the class defined by this `ClassDefItem`
     pub(crate) access_flags: uint,
+    /// Index into the `TypeId`s list or `NO_INDEX` there is no super class.
     pub(crate) superclass_idx: uint,
+    /// Offset from the start of the file to the location of a list of `TypeId`s which
+    /// represent the interfaces implemented by this class.
     pub(crate) interfaces_off: uint,
+    /// Index into the `StringId`s list which gives the source file name or `NO_INDEX`.
     pub(crate) source_file_idx: uint,
+    /// Offset from the start of the file to the location of an `AnntotationsDirectoryItem` where
+    /// the class annotations can be found. 0 if there are no annotations.
     pub(crate) annotations_off: uint,
+    /// Offset from the start of the file to the associated class data or `0` if there is none. The
+    /// data at the location should be defined in the `ClassDataItem` format.
     pub(crate) class_data_off: uint,
+    /// Offset from the start of the file to the list of initial values for static fields or `0` if
+    /// all values are to be initialized to `0` or `null`. The data at the location should be
+    /// defined in the `EncodedArrayItem` format.
     pub(crate) static_values_off: uint,
 }
 

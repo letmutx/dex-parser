@@ -1,3 +1,4 @@
+//! Dex `Field` and supporting structures
 use scroll::{ctx, Pread, Uleb128};
 
 use crate::cache::Ref;
@@ -11,8 +12,23 @@ use crate::string::StringId;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
-use crate::FieldAccessFlags;
 use getset::{CopyGetters, Getters};
+
+bitflags! {
+    /// Access flags of a Field.
+    pub struct AccessFlags: ulong {
+        const PUBLIC = 0x1;
+        const PRIVATE = 0x2;
+        const PROTECTED = 0x4;
+        const STATIC = 0x8;
+        const FINAL = 0x10;
+        const VOLATILE = 0x40;
+        const TRANSIENT = 0x80;
+        const SYNTHETIC = 0x1000;
+        const ANNOTATION = 0x2000;
+        const ENUM = 0x4000;
+    }
+}
 
 /// Represents the field of a class
 #[derive(Debug, Getters, CopyGetters)]
@@ -28,7 +44,7 @@ pub struct Field {
     class: ClassId,
     /// Access flags for the field.
     #[get_copy = "pub"]
-    access_flags: FieldAccessFlags,
+    access_flags: AccessFlags,
 }
 
 impl Field {
@@ -43,25 +59,29 @@ impl Field {
             name: dex.get_string(field_item.name_idx)?,
             jtype: dex.get_type(uint::from(field_item.type_idx))?,
             class: uint::from(field_item.class_idx),
-            access_flags: FieldAccessFlags::from_bits(encoded_field.access_flags).ok_or_else(
-                || {
-                    Error::InvalidId(format!(
-                        "Invalid access flags when loading field {}",
-                        field_item.name_idx
-                    ))
-                },
-            )?,
+            access_flags: AccessFlags::from_bits(encoded_field.access_flags).ok_or_else(|| {
+                Error::InvalidId(format!(
+                    "Invalid access flags when loading field {}",
+                    field_item.name_idx
+                ))
+            })?,
         })
     }
 }
 
+/// List of `EncodedField`s
 pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#field-id-item
-#[derive(Pread, Debug)]
+/// Defines a `Field`
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-id-item)
+#[derive(Pread, Debug, Getters)]
+#[get = "pub"]
 pub struct FieldIdItem {
+    /// Index into `TypeId`s list which contains the defining class's `Type`.
     class_idx: ushort,
+    /// Index into `TypeId`s list which contains the `Type` of the field.
     type_idx: ushort,
+    /// Index into `StringId`s list which contains the name of the field.
     name_idx: StringId,
 }
 
@@ -75,12 +95,18 @@ impl FieldIdItem {
     }
 }
 
+/// Index into the `FieldId`s list.
 pub type FieldId = ulong;
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#encoded-field-format
-#[derive(Debug)]
-pub(crate) struct EncodedField {
+/// Contains a `FieldId` along with its access flags.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoded-field-format)
+#[derive(Debug, CopyGetters)]
+#[get_copy = "pub"]
+pub struct EncodedField {
+    /// Index into the `FieldId`s list for the identity of this field represented as
+    /// a difference from the index of previous element in the list.
     pub(crate) field_id: FieldId,
+    /// Access flags for the field.
     access_flags: ulong,
 }
 

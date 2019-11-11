@@ -1,3 +1,4 @@
+//! Dex `Type` and utilities
 use std::clone::Clone;
 use std::fmt;
 
@@ -10,7 +11,7 @@ use crate::uint;
 pub type TypeId = uint;
 
 // TODO: add new function
-/// Represents a java type. The type descriptor conforms to
+/// Represents a Java type. The type descriptor conforms to
 /// https://source.android.com/devices/tech/dalvik/dex-format#typedescriptor
 #[derive(Debug, Getters, CopyGetters)]
 pub struct Type {

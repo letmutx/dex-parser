@@ -1,3 +1,4 @@
+//! Dex `Method` and supporting structures
 use getset::{CopyGetters, Getters};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -19,9 +20,28 @@ use crate::uint;
 use crate::ulong;
 use crate::ushort;
 use crate::utils;
-use crate::MethodAccessFlags;
 
-/// Represents a class method.
+bitflags! {
+    /// Access flags of a `Dex` Method
+    pub struct AccessFlags: ulong {
+        const PUBLIC = 0x1;
+        const PRIVATE = 0x2;
+        const PROTECTED = 0x4;
+        const STATIC = 0x8;
+        const FINAL = 0x10;
+        const SYNCHRONIZED = 0x20;
+        const BRIDGE = 0x40;
+        const VARARGS = 0x80;
+        const NATIVE = 0x100;
+        const ABSTRACT = 0x400;
+        const STRICT = 0x800;
+        const SYNTHETIC = 0x1000;
+        const CONSTRUCTOR = 0x10000;
+        const DECLARED_SYNCHRONIZED = 0x20000;
+    }
+}
+
+/// Represents a `Class` method.
 #[derive(Debug, Getters, CopyGetters)]
 pub struct Method {
     /// Parent class of the method.
@@ -32,7 +52,7 @@ pub struct Method {
     name: Ref<JString>,
     /// Access flags of the method.
     #[get_copy = "pub"]
-    access_flags: MethodAccessFlags,
+    access_flags: AccessFlags,
     /// Types of the parameters of the method.
     #[get = "pub"]
     params: Option<Vec<Type>>,
@@ -48,13 +68,20 @@ pub struct Method {
     code: Option<CodeItem>,
 }
 
+/// Index into the `ProtoId`s list.
 pub type ProtoId = ulong;
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#proto-id-item
-#[derive(Pread, Debug)]
+/// Method Prototypes.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#proto-id-item)
+#[derive(Pread, Debug, CopyGetters)]
+#[get_copy = "pub"]
 pub struct ProtoIdItem {
+    /// Index into the string_ids list for the short-form descriptor string of this prototype
     shorty: StringId,
+    /// Index into the type_ids list for the return type of this prototype.
     return_type: TypeId,
+    /// Offset from the start of the file to the list of parameter types for this prototype, or `0`
+    /// if this prototype has no params. The data at the location should be a list of types.
     params_off: uint,
 }
 
@@ -76,9 +103,9 @@ impl Method {
         debug!(target: "method", "encoded method: {:?}", encoded_method);
         let source = &dex.source;
         let method_item = dex.get_method_item(encoded_method.method_id)?;
-        let name = dex.get_string(method_item.name_id)?;
+        let name = dex.get_string(method_item.name_idx)?;
         debug!(target: "method", "name: {}, method id item: {:?}", name, method_item);
-        let proto_item = dex.get_proto_item(ulong::from(method_item.proto_id))?;
+        let proto_item = dex.get_proto_item(ulong::from(method_item.proto_idx))?;
         debug!(target: "method", "method proto_item: {:?}", proto_item);
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
@@ -95,15 +122,13 @@ impl Method {
         let code = dex.get_code_item(encoded_method.code_offset)?;
         Ok(Self {
             name,
-            class: dex.get_type(uint::from(method_item.class_id))?,
-            access_flags: MethodAccessFlags::from_bits(encoded_method.access_flags).ok_or_else(
-                || {
-                    Error::InvalidId(format!(
-                        "Invalid access flags for method {}",
-                        method_item.name_id
-                    ))
-                },
-            )?,
+            class: dex.get_type(uint::from(method_item.class_idx))?,
+            access_flags: AccessFlags::from_bits(encoded_method.access_flags).ok_or_else(|| {
+                Error::InvalidId(format!(
+                    "Invalid access flags for method {}",
+                    method_item.name_idx
+                ))
+            })?,
             shorty,
             return_type,
             params,
@@ -112,12 +137,17 @@ impl Method {
     }
 }
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#method-id-item
-#[derive(Pread, Debug)]
+/// Method identifier.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-id-item)
+#[derive(Pread, Debug, CopyGetters)]
+#[get_copy = "pub"]
 pub struct MethodIdItem {
-    class_id: ushort,
-    proto_id: ushort,
-    name_id: StringId,
+    /// Index into the `TypeId`s list for the definer of this method.
+    class_idx: ushort,
+    /// Index into the `ProtoId`s list for the prototype of this method.
+    proto_idx: ushort,
+    /// Index into the `StringId`s list for the name of this method.
+    name_idx: StringId,
 }
 
 impl MethodIdItem {
@@ -130,14 +160,23 @@ impl MethodIdItem {
     }
 }
 
+/// Index into the `MethodId`s list.
 pub type MethodId = ulong;
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#encoded-method
-#[derive(Debug, CopyGetters)]
-pub(crate) struct EncodedMethod {
+/// Contains a `MethodId` along with its access flags and code.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoded-method)
+#[derive(Debug, Getters, CopyGetters)]
+pub struct EncodedMethod {
+    /// Index into the `MethodId`s list for the identity of this method represented as
+    /// a difference from the index of previous element in the list.
     #[get_copy = "pub(crate)"]
     pub(crate) method_id: MethodId,
+    /// Access flags for this method.
+    #[get = "pub"]
     access_flags: ulong,
+    /// Offset from the start of the file to the code structure for this method, or `0` if this
+    /// method is either abstract or native.  The format of the data is specified by `CodeItem`.
+    #[get = "pub"]
     code_offset: ulong,
 }
 
@@ -147,6 +186,7 @@ impl EncodedItem for EncodedMethod {
     }
 }
 
+/// List of `EncodedMethod`s
 pub(crate) type EncodedMethodArray = EncodedItemArray<EncodedMethod>;
 
 impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
@@ -170,8 +210,8 @@ impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
 }
 
 /// Type of the method handle.
-/// https://source.android.com/devices/tech/dalvik/dex-format#method-handle-type-codes
-#[derive(FromPrimitive, Debug)]
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-handle-type-codes)
+#[derive(FromPrimitive, Debug, Clone, Copy)]
 pub enum MethodHandleType {
     StaticPut = 0x00,
     StaticGet = 0x01,
@@ -184,16 +224,21 @@ pub enum MethodHandleType {
     InvokeInterface = 0x08,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum FieldOrMethodId {
     Field(FieldId),
     Method(MethodId),
 }
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#method-handle-item
-#[derive(Debug)]
+/// A method handle.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-handle-item)
+#[derive(Debug, CopyGetters)]
+#[get_copy = "pub"]
 pub struct MethodHandleItem {
+    ///  The type of this MethodHandleItem.
     handle_type: MethodHandleType,
+    /// `FieldId` or `MethodId`  depending on whether the method handle type is an accessor or
+    /// a method invoker
     id: FieldOrMethodId,
 }
 

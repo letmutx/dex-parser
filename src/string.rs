@@ -199,7 +199,7 @@ mod tests {
     #[test]
     fn test_get_string() {
         let dex = crate::DexReader::from_file("resources/classes.dex").expect("failed to open dex");
-        let value = dex.strings.get_id("La/a/a/a/d;");
+        let value = dex.strings.get_id("Lorg/adw/launcher/Launcher;");
         assert!(value.is_ok());
         let value = value.unwrap();
         assert!(value.is_some());
@@ -208,7 +208,7 @@ mod tests {
             dex.get_string(string_id)
                 .expect("string id doesn't exist")
                 .to_string(),
-            "La/a/a/a/d;"
+            "Lorg/adw/launcher/Launcher;"
         );
     }
 }

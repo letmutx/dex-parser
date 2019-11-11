@@ -640,7 +640,7 @@ mod tests {
     fn test_find_class_by_name() {
         let dex =
             super::DexReader::from_file("resources/classes.dex").expect("cannot open dex file");
-        let class = dex.find_class_by_name("La/a/a/a/d;");
+        let class = dex.find_class_by_name("Lorg/adw/launcher/Launcher;");
         assert!(class.is_ok());
         assert!(class.unwrap().is_some());
     }

@@ -7,7 +7,6 @@ use scroll::Uleb128;
 use scroll::LE;
 
 use crate::annotation::EncodedAnnotation;
-use crate::cache::Ref;
 use crate::error::Error;
 use crate::field::FieldIdItem;
 use crate::int;
@@ -17,7 +16,7 @@ use crate::method::MethodHandleItem;
 use crate::method::MethodIdItem;
 use crate::method::ProtoIdItem;
 use crate::short;
-use crate::string::JString;
+use crate::string::DexString;
 use crate::ubyte;
 use crate::uint;
 use crate::ulong;
@@ -38,7 +37,7 @@ pub enum EncodedValue {
     Double(f64),
     MethodType(ProtoIdItem),
     MethodHandle(MethodHandleItem),
-    String(Ref<JString>),
+    String(DexString),
     Field(FieldIdItem),
     Method(MethodIdItem),
     Annotation(EncodedAnnotation),

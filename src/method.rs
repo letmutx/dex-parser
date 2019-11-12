@@ -6,7 +6,6 @@ use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
 
-use crate::cache::Ref;
 use crate::code::CodeItem;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
@@ -14,7 +13,7 @@ use crate::error::Error;
 use crate::field::FieldId;
 use crate::jtype::Type;
 use crate::jtype::TypeId;
-use crate::string::JString;
+use crate::string::DexString;
 use crate::string::StringId;
 use crate::uint;
 use crate::ulong;
@@ -49,7 +48,7 @@ pub struct Method {
     class: Type,
     /// Name of the method.
     #[get = "pub"]
-    name: Ref<JString>,
+    name: DexString,
     /// Access flags of the method.
     #[get_copy = "pub"]
     access_flags: AccessFlags,
@@ -59,7 +58,7 @@ pub struct Method {
     /// Shorty descriptor of the method. Conforms to
     /// https://source.android.com/devices/tech/dalvik/dex-format#shortydescriptor
     #[get = "pub"]
-    shorty: Ref<JString>,
+    shorty: DexString,
     /// Return type of the method.
     #[get = "pub"]
     return_type: Type,

@@ -1,5 +1,5 @@
+//! Dex String utilities
 use std::convert::AsRef;
-use std::convert::Into;
 use std::fmt;
 use std::ops::Deref;
 use std::ops::Range;
@@ -7,42 +7,38 @@ use std::ops::Range;
 use cesu8::{from_java_cesu8, to_java_cesu8};
 use scroll::{self, ctx, Pread, Uleb128};
 
-use crate::cache::{Cache, Ref};
+use crate::cache::Cache;
 use crate::error;
 use crate::error::Error;
 use crate::source::Source;
 use crate::uint;
 use crate::Result;
+use std::rc::Rc;
 
+/// Index into the `StringId`s section.
 pub type StringId = uint;
 
-/// Strings in `Dex` file are encoded as MUTF-8 code units. JString is a
-/// wrapper type for converting Java strings into Rust strings.
-/// https://source.android.com/devices/tech/dalvik/dex-format#mutf-8
+/// Strings in `Dex` file are encoded as MUTF-8 code units. DexString is a
+/// wrapper type for converting Dex strings into Rust strings.
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#mutf-8)
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
-pub struct JString {
-    string: String,
+pub struct DexString {
+    string: Rc<String>,
 }
 
-impl fmt::Display for JString {
+impl fmt::Display for DexString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.string)
     }
 }
 
-impl Into<String> for JString {
-    fn into(self) -> String {
-        self.string
-    }
-}
-
-impl From<String> for JString {
+impl From<String> for DexString {
     fn from(string: String) -> Self {
-        JString { string }
+        DexString { string: Rc::new(string) }
     }
 }
 
-impl Deref for JString {
+impl Deref for DexString {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
@@ -50,11 +46,11 @@ impl Deref for JString {
     }
 }
 
-impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
+impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for DexString {
     type Error = error::Error;
     type Size = usize;
 
-    /// https://source.android.com/devices/tech/dalvik/dex-format#string-data-item
+    // https://source.android.com/devices/tech/dalvik/dex-format#string-data-item
     fn try_from_ctx(source: &'a [u8], _: scroll::Endian) -> Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let _ = Uleb128::read(source, offset)?;
@@ -66,8 +62,12 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for JString {
         let bytes = &source[*offset..*offset + count];
         let size = *offset + bytes.len();
         Ok((
-            JString {
-                string: from_java_cesu8(bytes).unwrap().into_owned(),
+            DexString {
+                string: Rc::new(from_java_cesu8(bytes)
+                    .map_err(|e| {
+                        Error::MalFormed(format!("Malformed string: {:?}", e))
+                    })?
+                    .into_owned()),
             },
             size,
         ))
@@ -84,7 +84,7 @@ pub(crate) struct Strings<T> {
     endian: super::Endian,
     /// Length of the strings section.
     len: uint,
-    cache: Cache<StringId, JString>,
+    cache: Cache<StringId, DexString>,
     data_section: Range<uint>,
 }
 
@@ -111,7 +111,7 @@ where
         }
     }
 
-    fn parse(&self, id: StringId) -> Result<JString> {
+    fn parse(&self, id: StringId) -> Result<DexString> {
         let source = &self.source;
         let offset = self.offset as usize + id as usize * 4;
         let string_data_off: uint = source.pread_with(offset, self.endian)?;
@@ -125,7 +125,7 @@ where
     }
 
     /// Get the string at `id` updating the cache with the new item
-    pub(crate) fn get(&self, id: StringId) -> Result<Ref<JString>> {
+    pub(crate) fn get(&self, id: StringId) -> Result<DexString> {
         if id >= self.len {
             return Err(Error::InvalidId(format!("Invalid string id: {}", id)));
         }
@@ -191,7 +191,7 @@ impl<T: AsRef<[u8]>> StringsIter<T> {
 }
 
 impl<T: AsRef<[u8]>> Iterator for StringsIter<T> {
-    type Item = super::Result<Ref<JString>>;
+    type Item = super::Result<DexString>;
 
     // NOTE: iteration may cause cache thrashing, introduce a new
     // method to get but not update cache if needed

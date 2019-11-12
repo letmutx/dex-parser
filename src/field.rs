@@ -1,13 +1,12 @@
 //! Dex `Field` and supporting structures
 use scroll::{ctx, Pread, Uleb128};
 
-use crate::cache::Ref;
 use crate::class::ClassId;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
 use crate::error::Error;
 use crate::jtype::Type;
-use crate::string::JString;
+use crate::string::DexString;
 use crate::string::StringId;
 use crate::uint;
 use crate::ulong;
@@ -35,7 +34,7 @@ bitflags! {
 pub struct Field {
     /// Name of the field.
     #[get = "pub"]
-    name: Ref<JString>,
+    name: DexString,
     /// Type of the field.
     #[get = "pub"]
     jtype: Type,

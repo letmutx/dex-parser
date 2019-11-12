@@ -13,7 +13,6 @@ use super::Result;
 use crate::annotation::{
     AnnotationItem, AnnotationSetItem, AnnotationSetRefList, AnnotationsDirectoryItem,
 };
-use crate::cache::Ref;
 use crate::class::Class;
 use crate::class::ClassDataItem;
 use crate::class::ClassDefItem;
@@ -36,7 +35,7 @@ use crate::method::ProtoId;
 use crate::method::ProtoIdItem;
 use crate::search::Section;
 use crate::source::Source;
-use crate::string::JString;
+use crate::string::DexString;
 use crate::string::StringId;
 use crate::string::Strings;
 use crate::string::StringsIter;
@@ -347,7 +346,7 @@ where
         self.inner.data_section().contains(&offset)
     }
 
-    pub(crate) fn get_source_file(&self, file_id: StringId) -> Result<Option<Ref<JString>>> {
+    pub(crate) fn get_source_file(&self, file_id: StringId) -> Result<Option<DexString>> {
         Ok(if file_id == NO_INDEX {
             None
         } else {
@@ -355,8 +354,8 @@ where
         })
     }
 
-    /// Returns a reference to the `JString` represented by the given id.
-    pub fn get_string(&self, string_id: StringId) -> Result<Ref<JString>> {
+    /// Returns a reference to the `DexString` represented by the given id.
+    pub fn get_string(&self, string_id: StringId) -> Result<DexString> {
         if self.inner.strings_len() <= string_id {
             return Err(Error::InvalidId(format!(
                 "Invalid string id: {}",
@@ -517,7 +516,7 @@ where
     }
 
     /// Iterator over the strings
-    pub fn strings(&self) -> impl Iterator<Item = Result<Ref<JString>>> {
+    pub fn strings(&self) -> impl Iterator<Item = Result<DexString>> {
         StringsIter::new(self.strings.clone(), self.inner.strings_len() as usize)
     }
 

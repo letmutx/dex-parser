@@ -6,7 +6,6 @@ use scroll::ctx;
 use scroll::{Pread, Uleb128};
 
 use crate::annotation::AnnotationsDirectoryItem;
-use crate::cache::Ref;
 use crate::encoded_item::EncodedItemArrayCtx;
 use crate::encoded_value::EncodedArray;
 use crate::error::Error;
@@ -16,7 +15,7 @@ use crate::jtype::Type;
 use crate::method::EncodedMethodArray;
 use crate::method::Method;
 use crate::source::Source;
-use crate::string::JString;
+use crate::string::DexString;
 use crate::uint;
 
 /// `ClassId` is an index into the Types section. The corresponding `Type` denotes the type of
@@ -64,7 +63,7 @@ pub struct Class {
     pub(crate) annotations: Option<AnnotationsDirectoryItem>,
     /// The file in which this class is found in the source code.
     #[get = "pub"]
-    pub(crate) source_file: Option<Ref<JString>>,
+    pub(crate) source_file: Option<DexString>,
     /// Static fields defined in the class.
     pub(crate) static_fields: Vec<Field>,
     /// Instance fields defined in the class.

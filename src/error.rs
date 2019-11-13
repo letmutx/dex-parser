@@ -10,6 +10,7 @@ pub enum Error {
     IO(io::Error),
     InvalidId(String),
     Scroll(scroll::Error),
+    BadOffset(usize, String),
 }
 
 impl error::Error for Error {
@@ -19,6 +20,7 @@ impl error::Error for Error {
             Error::MalFormed(_) => "Entity is malformed in some way",
             Error::Scroll(_) => "Scroll error",
             Error::InvalidId(_) => "Invalid index",
+            Error::BadOffset(_, _) => "Invalid offset",
         }
     }
 
@@ -28,6 +30,7 @@ impl error::Error for Error {
             Error::Scroll(ref err) => err.source(),
             Error::MalFormed(_) => None,
             Error::InvalidId(_) => None,
+            Error::BadOffset(_, _) => None,
         }
     }
 }
@@ -51,6 +54,7 @@ impl Display for Error {
             Error::Scroll(ref err) => write!(fmt, "{}", err),
             Error::MalFormed(ref msg) => write!(fmt, "Malformed entity: {}", msg),
             Error::InvalidId(ref msg) => write!(fmt, "{}", msg),
+            Error::BadOffset(offset, ref msg) => write!(fmt, "{}: {}", msg, offset),
         }
     }
 }

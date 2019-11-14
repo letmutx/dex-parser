@@ -2,6 +2,7 @@ use std::convert::AsRef;
 use std::convert::Into;
 use std::fmt;
 use std::ops::Deref;
+use std::ops::Range;
 
 use cesu8::{from_java_cesu8, to_java_cesu8};
 use scroll::{self, ctx, Pread, Uleb128};
@@ -84,6 +85,7 @@ pub(crate) struct Strings<T> {
     /// Length of the strings section.
     len: uint,
     cache: Cache<StringId, JString>,
+    data_section: Range<uint>,
 }
 
 impl<T> Strings<T>
@@ -97,6 +99,7 @@ where
         offset: uint,
         len: uint,
         cache_size: usize,
+        data_section: Range<uint>,
     ) -> Self {
         Self {
             source,
@@ -104,6 +107,7 @@ where
             endian,
             len,
             cache: Cache::new(cache_size),
+            data_section,
         }
     }
 
@@ -111,6 +115,12 @@ where
         let source = &self.source;
         let offset = self.offset as usize + id as usize * 4;
         let string_data_off: uint = source.pread_with(offset, self.endian)?;
+        if !self.data_section.contains(&string_data_off) {
+            return Err(error::Error::BadOffset(
+                string_data_off as usize,
+                format!("string_data_off not in data section for StringId: {}", id),
+            ));
+        }
         source.pread(string_data_off as usize)
     }
 
@@ -157,6 +167,7 @@ impl<T> Clone for Strings<T> {
             endian: self.endian,
             len: self.len,
             cache: self.cache.clone(),
+            data_section: self.data_section.clone(),
         }
     }
 }

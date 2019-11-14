@@ -1,4 +1,5 @@
 use std::fs::File;
+use std::ops::Range;
 
 use getset::{CopyGetters, Getters};
 use memmap::Mmap;
@@ -19,8 +20,7 @@ use crate::class::ClassDefItem;
 use crate::class::ClassDefItemIter;
 use crate::code::{CodeItem, DebugInfoItem};
 use crate::encoded_value::EncodedArray;
-use crate::error;
-use crate::error::Error;
+use crate::error::{self, Error};
 use crate::field::EncodedField;
 use crate::field::Field;
 use crate::field::FieldId;
@@ -113,6 +113,12 @@ pub struct Header {
     data_off: uint,
 }
 
+impl Header {
+    fn data_section(&self) -> Range<uint> {
+        (self.data_off..self.data_off + self.data_size)
+    }
+}
+
 /// Wrapper type for Dex
 #[derive(Debug, Getters, CopyGetters)]
 pub(crate) struct DexInner {
@@ -175,6 +181,10 @@ impl DexInner {
         self.header.type_ids_size
     }
 
+    fn data_section(&self) -> Range<uint> {
+        self.header.data_section()
+    }
+
     fn method_handles_offset(&self) -> Option<uint> {
         self.map_list.get_offset(ItemType::MethodHandleItem)
     }
@@ -191,7 +201,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
 
     fn try_from_ctx(source: &'a [u8], _: ()) -> Result<(Self, Self::Size)> {
         if source.len() <= 44 {
-            error!("malformed dex: size < minimum header size");
+            debug!("malformed dex: size < minimum header size");
             return Err(Error::MalFormed("Invalid dex file".to_string()));
         }
         let endian_tag = &source[40..44];
@@ -201,6 +211,12 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
             _ => return Err(error::Error::MalFormed("Bad endian tag".to_string())),
         };
         let header = source.pread_with::<Header>(0, endian)?;
+        if !header.data_section().contains(&header.map_off) {
+            return Err(error::Error::BadOffset(
+                header.map_off as usize,
+                "map_list not in data section".to_string(),
+            ));
+        }
         let map_list = source.pread_with(header.map_off as usize, endian)?;
         debug!(target: "initialization", "header: {:?}, endian-ness: {:?}", header, endian);
         debug!(target: "initialization", "map_list: {:?}", map_list);
@@ -327,6 +343,10 @@ impl<T> Dex<T>
 where
     T: AsRef<[u8]>,
 {
+    pub(crate) fn is_offset_in_data_section(&self, offset: uint) -> bool {
+        self.inner.data_section().contains(&offset)
+    }
+
     pub(crate) fn get_source_file(&self, file_id: StringId) -> Result<Option<Ref<JString>>> {
         Ok(if file_id == NO_INDEX {
             None
@@ -431,10 +451,16 @@ where
 
     pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Option<Vec<Type>>> {
         debug!(target: "interfaces", "interfaces offset: {}", offset);
-        let mut offset = offset as usize;
         if offset == 0 {
             return Ok(None);
         }
+        if !self.is_offset_in_data_section(offset) {
+            return Err(Error::BadOffset(
+                offset as usize,
+                "Interfaces offset not in data section".to_string(),
+            ));
+        }
+        let mut offset = offset as usize;
         let source = &self.source;
         let endian = self.get_endian();
         let len = source.gread_with::<uint>(&mut offset, endian)?;
@@ -508,6 +534,12 @@ where
         if offset == 0 {
             return Ok(None);
         }
+        if !self.is_offset_in_data_section(offset) {
+            return Err(Error::BadOffset(
+                offset as usize,
+                "ClassData offset not in data section".to_string(),
+            ));
+        }
         Ok(Some(self.source.pread_with(offset as usize, self)?))
     }
 
@@ -548,12 +580,23 @@ where
         if code_off == 0 {
             return Ok(None);
         }
-
+        if !self.is_offset_in_data_section(code_off as uint) {
+            return Err(Error::BadOffset(
+                code_off as usize,
+                "CodeItem offset not in data section".to_string(),
+            ));
+        }
         Ok(Some(self.source.pread_with(code_off as usize, self)?))
     }
 
     pub(crate) fn get_annotation_item(&self, annotation_off: uint) -> Result<AnnotationItem> {
         debug!(target: "annotaion-item", "annotation item offset: {}", annotation_off);
+        if !self.is_offset_in_data_section(annotation_off) {
+            return Err(Error::BadOffset(
+                annotation_off as usize,
+                "AnnotationItem offset not in data section".to_string(),
+            ));
+        }
         Ok(self.source.pread_with(annotation_off as usize, self)?)
     }
 
@@ -565,6 +608,12 @@ where
         if annotation_set_item_off == 0 {
             return Ok(None);
         }
+        if !self.is_offset_in_data_section(annotation_set_item_off) {
+            return Err(Error::BadOffset(
+                annotation_set_item_off as usize,
+                "AnnotationSetItem offset not in data section".to_string(),
+            ));
+        }
         Ok(Some(
             self.source
                 .pread_with(annotation_set_item_off as usize, self)?,
@@ -575,6 +624,12 @@ where
         &self,
         annotation_set_ref_list_off: uint,
     ) -> Result<AnnotationSetRefList> {
+        if !self.is_offset_in_data_section(annotation_set_ref_list_off) {
+            return Err(Error::BadOffset(
+                annotation_set_ref_list_off as usize,
+                "AnnotationSetRefList offset not in data section".to_string(),
+            ));
+        }
         Ok(self
             .source
             .pread_with(annotation_set_ref_list_off as usize, self)?)
@@ -584,6 +639,12 @@ where
         debug!(target: "class", "static values offset: {}", static_values_off);
         if static_values_off == 0 {
             return Ok(EncodedArray::new());
+        }
+        if !self.is_offset_in_data_section(static_values_off) {
+            return Err(Error::BadOffset(
+                static_values_off as usize,
+                "Class static values offset not in data section".to_string(),
+            ));
         }
         self.source.pread_with(static_values_off as usize, self)
     }
@@ -596,6 +657,12 @@ where
         if annotations_directory_item_off == 0 {
             return Ok(None);
         }
+        if !self.is_offset_in_data_section(annotations_directory_item_off) {
+            return Err(Error::BadOffset(
+                annotations_directory_item_off as usize,
+                "Annotations directory offset not in data section".to_string(),
+            ));
+        }
         Ok(Some(self.source.pread_with(
             annotations_directory_item_off as usize,
             self,
@@ -603,6 +670,13 @@ where
     }
 
     pub(crate) fn get_debug_info_item(&self, debug_info_off: uint) -> Result<DebugInfoItem> {
+        if !self.is_offset_in_data_section(debug_info_off) {
+            return Err(Error::BadOffset(
+                debug_info_off as usize,
+                "DebugInfoItem offset not in data section".to_string(),
+            ));
+        }
+
         Ok(self.source.pread_with(debug_info_off as usize, self)?)
     }
 }
@@ -624,6 +698,7 @@ impl DexReader {
             inner.strings_offset(),
             inner.strings_len(),
             4096,
+            inner.data_section(),
         );
         Ok(Dex {
             source: source.clone(),

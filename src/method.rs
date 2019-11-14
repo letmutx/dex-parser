@@ -110,6 +110,15 @@ impl Method {
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
         let params = if proto_item.params_off != 0 {
+            if !dex.is_offset_in_data_section(proto_item.params_off) {
+                return Err(Error::BadOffset(
+                    proto_item.params_off as usize,
+                    format!(
+                        "Params offset not in data section for proto_item: {:?}",
+                        proto_item
+                    ),
+                ));
+            }
             let offset = &mut (proto_item.params_off as usize);
             let endian = dex.get_endian();
             let len = source.gread_with::<uint>(offset, endian)?;

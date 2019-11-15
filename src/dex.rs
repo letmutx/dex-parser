@@ -1,6 +1,8 @@
 use std::fs::File;
+use std::io::BufReader;
 use std::ops::Range;
 
+use adler32;
 use getset::{CopyGetters, Getters};
 use memmap::Mmap;
 use memmap::MmapOptions;
@@ -217,6 +219,15 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
                 "map_list not in data section".to_string(),
             ));
         }
+        let found = header.checksum();
+        let computed = adler32::adler32(BufReader::new(&source[12..]))?;
+        if computed != found {
+            return Err(Error::MalFormed(format!(
+                "File corrupted, adler32 checksum doesn't match: computed: {}, found: {}",
+                computed, found
+            )));
+        }
+
         let map_list = source.pread_with(header.map_off as usize, endian)?;
         debug!(target: "initialization", "header: {:?}, endian-ness: {:?}", header, endian);
         debug!(target: "initialization", "map_list: {:?}", map_list);

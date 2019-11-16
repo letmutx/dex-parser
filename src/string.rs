@@ -26,6 +26,12 @@ pub struct DexString {
     string: Rc<String>,
 }
 
+impl<S: AsRef<str>> PartialEq<S> for DexString {
+    fn eq(&self, other: &S) -> bool {
+        &*self.string == &*other.as_ref()
+    }
+}
+
 impl fmt::Display for DexString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.string)
@@ -34,7 +40,9 @@ impl fmt::Display for DexString {
 
 impl From<String> for DexString {
     fn from(string: String) -> Self {
-        DexString { string: Rc::new(string) }
+        DexString {
+            string: Rc::new(string),
+        }
     }
 }
 
@@ -63,11 +71,11 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for DexString {
         let size = *offset + bytes.len();
         Ok((
             DexString {
-                string: Rc::new(from_java_cesu8(bytes)
-                    .map_err(|e| {
-                        Error::MalFormed(format!("Malformed string: {:?}", e))
-                    })?
-                    .into_owned()),
+                string: Rc::new(
+                    from_java_cesu8(bytes)
+                        .map_err(|e| Error::MalFormed(format!("Malformed string: {:?}", e)))?
+                        .into_owned(),
+                ),
             },
             size,
         ))

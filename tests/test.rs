@@ -95,9 +95,9 @@ macro_rules! test {
 test!(
     test_dex_from_file_works,
     {
-        "Test.java" =>
+        "Main.java" =>
         r#"
-            class Test {
+            class Main {
              public static void main(String[] args) {
                 System.out.println("1 + 1 = " + 1 + 1);
              }
@@ -107,15 +107,52 @@ test!(
 );
 
 test!(
-    test_strings_len_match,
+    test_contains_class,
     {
-        "Test.java" =>
+        "Main.java" =>
         r#"
-            class Test {}
+            class Main {}
         "#
     },
     |dex: dex::Dex<_>| {
-        let len = dex.strings().count();
-        assert_eq!(len, 6);
+        let class = dex.find_class_by_name("LMain;");
+        assert!(class.is_ok());
+        let class = class.unwrap();
+        assert!(class.is_some());
+    }
+);
+
+const FIELDS_TEST_SOURCE: &str = r#"
+    class Main {
+        static int staticIntVar = 44;
+        double doubleVar = 3.0d;
+        final String finalStringVar = "value";
+    }
+"#;
+
+test!(
+    test_class_fields,
+    {
+        "Main.java" => FIELDS_TEST_SOURCE
+    },
+    |dex: dex::Dex<_>| {
+        let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
+        let fields = class.fields().collect::<Vec<_>>();
+        assert_eq!(fields.len(), 3);
+    }
+);
+
+test!(
+    test_field_attributes,
+    {
+        "Main.java" => FIELDS_TEST_SOURCE
+    },
+    |dex: dex::Dex<_>| {
+        let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
+        let fields = class.fields().collect::<Vec<_>>();
+        let static_field = fields.iter().find(|f| &***f.name() == "staticIntVar");
+        assert!(static_field.is_some());
+        let static_field = static_field.unwrap();
+        assert!(static_field.access_flags().contains(dex::field::AccessFlags::STATIC));
     }
 );

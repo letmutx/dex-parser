@@ -34,7 +34,7 @@ pub mod jtype;
 pub mod method;
 mod search;
 mod source;
-mod string;
+pub mod string;
 
 /// The constant NO_INDEX is used to indicate that an index value is absent.
 pub const NO_INDEX: uint = 0xffff_ffff;

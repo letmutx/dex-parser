@@ -4,8 +4,7 @@ use std::fmt;
 
 use getset::{CopyGetters, Getters};
 
-use crate::cache::Ref;
-use crate::string::JString;
+use crate::string::DexString;
 use crate::uint;
 
 pub type TypeId = uint;
@@ -19,7 +18,7 @@ pub struct Type {
     pub(crate) id: TypeId,
     /// The type descriptor string for this string.
     #[get = "pub"]
-    pub(crate) type_descriptor: Ref<JString>,
+    pub(crate) type_descriptor: DexString,
 }
 
 impl Clone for Type {

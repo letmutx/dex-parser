@@ -4,11 +4,10 @@ use std::fmt;
 
 use getset::{CopyGetters, Getters};
 
-use crate::cache::Ref;
 use crate::encoded_item::EncodedCatchHandlers;
 use crate::error::Error;
 use crate::jtype::Type;
-use crate::string::JString;
+use crate::string::DexString;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
@@ -20,7 +19,7 @@ pub struct DebugInfoItem {
     #[get_copy = "pub"]
     line_start: usize,
     #[get = "pub"]
-    parameter_names: Vec<Option<Ref<JString>>>,
+    parameter_names: Vec<Option<DexString>>,
 }
 
 /// Code and Debug Info of a method.

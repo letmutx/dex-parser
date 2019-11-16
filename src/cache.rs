@@ -1,52 +1,16 @@
 use std::cell::RefCell;
 use std::cmp::Eq;
-use std::fmt;
 use std::hash::Hash;
-use std::ops::Deref;
 use std::rc::Rc;
 
 use lru::LruCache;
 
-pub struct Ref<V>(Rc<V>);
-
-impl<V: fmt::Debug> fmt::Debug for Ref<V> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self.0)
-    }
-}
-
-impl<V: fmt::Display> fmt::Display for Ref<V> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl<V> Ref<V> {
-    pub(crate) fn new(value: V) -> Self {
-        Ref(Rc::new(value))
-    }
-}
-
-impl<V> Deref for Ref<V> {
-    type Target = V;
-
-    fn deref(&self) -> &Self::Target {
-        &*(self.0)
-    }
-}
-
-impl<V> Clone for Ref<V> {
-    fn clone(&self) -> Self {
-        Ref(self.0.clone())
-    }
-}
-
 /// LRU cache that provides interior mutability
 pub(crate) struct Cache<K, V> {
-    inner: Rc<RefCell<LruCache<K, Ref<V>>>>,
+    inner: Rc<RefCell<LruCache<K, V>>>,
 }
 
-impl<K: Hash + Eq, V> Cache<K, V> {
+impl<K: Hash + Eq, V: Clone> Cache<K, V> {
     /// Get a new instance of cache with the given capacity
     pub(crate) fn new(cap: usize) -> Self {
         Self {
@@ -55,7 +19,7 @@ impl<K: Hash + Eq, V> Cache<K, V> {
     }
 
     /// Get a reference to the value at key from the cache, if found
-    pub(crate) fn get(&self, key: &K) -> Option<Ref<V>> {
+    pub(crate) fn get(&self, key: &K) -> Option<V> {
         self.inner
             .borrow_mut()
             .get(key)
@@ -64,7 +28,7 @@ impl<K: Hash + Eq, V> Cache<K, V> {
 
     /// Insert a new key value pair into the cache
     pub(crate) fn put(&self, key: K, value: V) {
-        self.inner.borrow_mut().put(key, Ref::new(value));
+        self.inner.borrow_mut().put(key, value);
     }
 }
 

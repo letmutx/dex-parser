@@ -107,7 +107,52 @@ test!(
 );
 
 test!(
-    test_contains_class,
+    test_find_class_by_name,
+    {
+        "Main.java" => r#"
+            class Main {}
+        "#
+    };
+    {
+        "Day.java" => r#"
+            public enum Day {
+               SUNDAY, MONDAY, TUESDAY, WEDNESDAY,
+               THURSDAY, FRIDAY, SATURDAY 
+            }
+        "#
+    };
+    {
+        "SuperClass.java" => r#"
+            class SuperClass {}
+        "#
+    };
+    {
+        "MyInterface.java" => r#"
+            interface MyInterface {
+                String interfaceMethod(int x, String y);
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        use dex::class::AccessFlags;
+        assert_eq!(dex.header().class_defs_size(), 4);
+        let find = |name| {
+            let class = dex.find_class_by_name(name);
+            assert!(class.is_ok());
+            let class = class.unwrap();
+            assert!(class.is_some());
+            class.unwrap()
+        };
+        let interface = find("LMyInterface;");
+        assert!(interface.access_flags().contains(AccessFlags::INTERFACE));
+
+        let enum_class = find("LDay;");
+        assert!(enum_class.access_flags().contains(AccessFlags::ENUM));
+    }
+);
+
+test!(
+    test_class_exists,
     {
         "Main.java" =>
         r#"
@@ -122,37 +167,143 @@ test!(
     }
 );
 
-const FIELDS_TEST_SOURCE: &str = r#"
-    class Main {
-        static int staticIntVar = 44;
-        double doubleVar = 3.0d;
-        final String finalStringVar = "value";
-    }
-"#;
-
+// TODO: add tests for interface fields, generic fields, initial values, annotations on fields
 test!(
-    test_class_fields,
+    test_fields,
     {
-        "Main.java" => FIELDS_TEST_SOURCE
+        "Main.java" => r#"
+          class Main {
+              public static int staticVar = 42;
+              final double finalVar = 32.0d;
+              private String privateField;
+              public String publicField;
+              protected String protectedField;
+              int[] arrayField;
+              Day enumField;
+          }
+        "#
+    };
+    {
+        "Day.java" => r#"
+            public enum Day {
+               SUNDAY, MONDAY, TUESDAY, WEDNESDAY,
+               THURSDAY, FRIDAY, SATURDAY 
+            }
+        "#
     },
     |dex: dex::Dex<_>| {
+        use dex::field::AccessFlags;
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
-        let fields = class.fields().collect::<Vec<_>>();
-        assert_eq!(fields.len(), 3);
+        assert_eq!(class.static_fields().count(), 1);
+        assert_eq!(class.instance_fields().count(), 6);
+        assert_eq!(class.fields().count(), 7);
+        let find = |name| { 
+            let field = class.fields().find(|f| f.name() == name);
+            assert!(field.is_some());
+            field.unwrap()
+        };
+        let static_field = find(&"staticVar");
+        assert!(static_field.access_flags().contains(AccessFlags::STATIC));
+        assert!(static_field.access_flags().contains(AccessFlags::PUBLIC));
+        assert_eq!(static_field.jtype(), &"I");
+
+        let final_field = find(&"finalVar");
+        assert!(final_field.access_flags().contains(AccessFlags::FINAL));
+        assert_eq!(final_field.jtype(), &"D");
+
+        let protected_field = find(&"protectedField");
+        assert!(protected_field.access_flags().contains(AccessFlags::PROTECTED));
+        assert_eq!(protected_field.jtype(), &"Ljava/lang/String;");
+
+        let private_field = find(&"privateField");
+        assert!(private_field.access_flags().contains(AccessFlags::PRIVATE));
+
+        let public_field = find(&"publicField");
+        assert!(public_field.access_flags().contains(AccessFlags::PUBLIC));
+
+        let array_field = find(&"arrayField");
+        assert_eq!(array_field.jtype(), &"[I");
+
+        // TODO: find out why d8 fails with warning:
+        // d8 is from build-tools:29.0.2
+        // Type `java.lang.Enum` was not found, it is required for default or static interface
+        // methods desugaring of `Day Day.valueOf(java.lang.String)`
+        // let enum_field = find(&"enumField");
+        // assert!(enum_field.access_flags().contains(AccessFlags::ENUM));
+        
     }
 );
 
+// TODO:  test interfaces, enums, abstract classes
+
 test!(
-    test_field_attributes,
+    test_class_methods,
     {
-        "Main.java" => FIELDS_TEST_SOURCE
+        "Main.java" => r#"
+            import java.util.List;
+            class Main extends SuperClass implements MyInterface {
+              // constructor 
+              Main() {}
+
+              // attributes
+              void defaultMethod() {}
+              final void finalMethod() {}
+              static void staticMethod() {}
+              public void publicMethod() {}
+              private void privateMethod() {}
+              protected void protectedMethod() {}
+
+              // return values
+              int primitiveReturnMethod() { return 0; }
+              String classReturnMethod() { return null; }
+              long[] arrayReturnMethod() { return new long[10]; }
+              Day enumReturnMethod() { return Day.SUNDAY; }
+
+              // params
+              int primitiveParams(char u, short v, byte w, int x, long y, boolean z, double a, float b) { return 0; }
+              String classParams(String x, String y) { return "22"; }
+              void enumParam(Day day) {}
+              void interfaceParam(MyInterface instance) {}
+
+              // overriden method
+              @Override int superMethod(String y) { return 2; }
+              
+              // interface method
+              public String interfaceMethod(int x, String y) { return y + x; }
+
+              private <T> void processChanges(List<T> myList, int k) {}
+
+              private <T> void processChanges(T typeParam, int k) {}
+            }
+        "#
+    };
+    {
+        "Day.java" => r#"
+            public enum Day {
+               SUNDAY, MONDAY, TUESDAY, WEDNESDAY,
+               THURSDAY, FRIDAY, SATURDAY 
+            }
+        "#
+    };
+    {
+        "SuperClass.java" => r#"
+            class SuperClass {
+                int superMethod(String x) { return 1; }
+            }
+        "#
+    };
+    {
+        "MyInterface.java" => r#"
+            interface MyInterface {
+                String interfaceMethod(int x, String y);
+            }
+        "#
     },
     |dex: dex::Dex<_>| {
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
-        let fields = class.fields().collect::<Vec<_>>();
-        let static_field = fields.iter().find(|f| &***f.name() == "staticIntVar");
-        assert!(static_field.is_some());
-        let static_field = static_field.unwrap();
-        assert!(static_field.access_flags().contains(dex::field::AccessFlags::STATIC));
+        assert_eq!(class.methods().count(), 19);
+        assert_eq!(class.direct_methods().count(), 5);
+        assert_eq!(class.virtual_methods().count(), 14);
+        // TODO: test method access flags, params, annotations etc.
     }
 );

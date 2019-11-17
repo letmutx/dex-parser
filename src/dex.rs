@@ -384,6 +384,7 @@ where
         Section::new(type_ids_section)
     }
 
+    #[allow(unused)]
     pub(crate) fn class_defs_section(&self) -> Section {
         let class_defs_offset = self.inner.class_defs_offset() as usize;
         let (start, end) = (
@@ -394,13 +395,14 @@ where
         Section::new(class_defs_section)
     }
 
-    pub(crate) fn find_class_by_type(&self, type_id: TypeId) -> Result<Option<usize>> {
-        let class_defs_section = self.class_defs_section();
-        Ok(class_defs_section.binary_search(
-            &type_id,
-            self.get_endian(),
-            |class_def: &ClassDefItem, type_id: &TypeId| Ok(type_id.cmp(&class_def.class_idx)),
-        )?)
+    pub(crate) fn find_class_by_type(&self, type_id: TypeId) -> Result<Option<Class>> {
+        for class_def in self.class_defs() {
+            let class_def = class_def?;
+            if class_def.class_idx == type_id {
+                return Ok(Some(Class::try_from_dex(self, &class_def)?));
+            }
+        }
+        Ok(None)
     }
 
     /// Finds `Class` by the given class name. The name should be in smali format.
@@ -417,16 +419,7 @@ where
             debug!(target: "find-class-by-name", "no type id found for string id: {}", string_id.unwrap());
             return Ok(None);
         }
-        let class_def_item_id = self.find_class_by_type(type_id.unwrap())?;
-        if class_def_item_id.is_none() {
-            debug!(target: "find-class-by-name", "type id is not a class: {}", type_id.unwrap());
-            return Ok(None);
-        }
-        let class_def = self
-            .class_defs_section()
-            .as_ref()
-            .pread_with(class_def_item_id.unwrap() * 32, self.get_endian())?;
-        Ok(Some(Class::try_from_dex(self, &class_def)?))
+        self.find_class_by_type(type_id.unwrap())
     }
 
     pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Option<Vec<Type>>> {

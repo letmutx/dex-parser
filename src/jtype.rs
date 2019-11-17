@@ -7,11 +7,11 @@ use getset::{CopyGetters, Getters};
 use crate::string::DexString;
 use crate::uint;
 
+/// Offset into the `TypeId`s section.
 pub type TypeId = uint;
 
-// TODO: add new function
 /// Represents a Java type. The type descriptor conforms to
-/// https://source.android.com/devices/tech/dalvik/dex-format#typedescriptor
+/// the syntax described [here](https://source.android.com/devices/tech/dalvik/dex-format#typedescriptor)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct Type {
     #[get_copy = "pub"]
@@ -33,6 +33,18 @@ impl Clone for Type {
 impl PartialEq<Type> for Type {
     fn eq(&self, other: &Type) -> bool {
         self.id == other.id
+    }
+}
+
+impl PartialEq<DexString> for Type {
+    fn eq(&self, other: &DexString) -> bool {
+        self.type_descriptor() == other
+    }
+}
+
+impl<S: AsRef<str>> PartialEq<S> for Type {
+    fn eq(&self, other: &S) -> bool {
+        self.type_descriptor() == &other.as_ref()
     }
 }
 

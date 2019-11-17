@@ -72,7 +72,7 @@ impl TestBuilder {
 
 // TODO: support test attributes if necessary
 macro_rules! test {
-    ($test_name: ident, $({ $fname:expr => $code:expr }),+,$test_func:expr) => {
+    ($test_name: ident, $({ $fname:expr => $code:expr });+,$test_func:expr) => {
         #[test]
         fn $test_name() {
             use dex::DexReader;

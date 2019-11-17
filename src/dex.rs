@@ -353,6 +353,10 @@ impl<T> Dex<T>
 where
     T: AsRef<[u8]>,
 {
+    pub fn header(&self) -> &Header {
+        self.inner.header()
+    }
+
     pub(crate) fn is_offset_in_data_section(&self, offset: uint) -> bool {
         self.inner.data_section().contains(&offset)
     }

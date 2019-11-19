@@ -21,7 +21,7 @@ pub type StringId = uint;
 /// Strings in `Dex` file are encoded as MUTF-8 code units. DexString is a
 /// wrapper type for converting Dex strings into Rust strings.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#mutf-8)
-#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone, PartialOrd, Ord)]
 pub struct DexString {
     string: Rc<String>,
 }

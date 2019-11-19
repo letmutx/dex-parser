@@ -71,10 +71,14 @@ impl TestBuilder {
 }
 
 macro_rules! assert_has_access_flags {
-    ($item: ident, [ $($flag: ident),+ ]) => {
+    ($item: ident, [ $($flag: ident),+ ], $msg:expr) => {
         $(
-            assert!($item.access_flags().contains(AccessFlags::$flag));
+            assert!($item.access_flags().contains(AccessFlags::$flag), $msg);
         )*
+    };
+
+    ($item: ident, [ $($flag: ident),+ ]) => {
+        assert_has_access_flags!($item,  [$($flag),+], "")
     }
 }
 

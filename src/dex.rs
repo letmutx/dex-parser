@@ -732,9 +732,13 @@ mod tests {
     fn test_find_class_by_name() {
         let dex =
             super::DexReader::from_file("resources/classes.dex").expect("cannot open dex file");
-        let class = dex.find_class_by_name("Lorg/adw/launcher/Launcher;");
-        assert!(class.is_ok());
-        assert!(class.unwrap().is_some());
+        for class_def in dex.class_defs() {
+            let class_def = class_def.expect("can't load class");
+            let jtype = dex.get_type(class_def.class_idx()).expect("bad type");
+            let result = dex.find_class_by_name(&jtype.type_descriptor().to_string());
+            assert!(result.is_ok());
+            assert!(result.unwrap().is_some());
+        }
     }
 
     #[test]

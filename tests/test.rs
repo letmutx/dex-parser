@@ -251,12 +251,13 @@ test!(
 
 // TODO:  test interfaces, enums, abstract classes
 
+// TODO: test method annotations
 test!(
-    test_class_methods,
+    test_methods,
     {
         "Main.java" => r#"
             import java.util.List;
-            class Main extends SuperClass implements MyInterface {
+            abstract class Main extends SuperClass implements MyInterface {
               // constructor 
               Main() {}
 
@@ -272,6 +273,7 @@ test!(
               int primitiveReturnMethod() { return 0; }
               String classReturnMethod() { return null; }
               long[] arrayReturnMethod() { return new long[10]; }
+              String[] objectArrayReturnMethod() { return new String[10]; }
               Day enumReturnMethod() { return Day.SUNDAY; }
 
               // params
@@ -279,6 +281,15 @@ test!(
               String classParams(String x, String y) { return "22"; }
               void enumParam(Day day) {}
               void interfaceParam(MyInterface instance) {}
+              void primitiveArrayParam(long[] instance) {}
+              void objectArrayParam(String[] instance) {}
+              private <T> void genericParamsMethod1(List<T> myList, int k) {}
+              private <T> void genericParamsMethod2(T typeParam, int k) {}
+              private void genericParamsMethod3(List<? super Main> typeParam, int k) {}
+              private void genericParamsMethod4(List<? extends Main> typeParam, int k) {}
+              private <T extends SuperClass> void genericParamWithExtendsClauseMethod(T typeParam) {}
+              private <T extends SuperClass & MyInterface> void genericParamWithMultipleExtendsClauseMethod(T typeParam) {}
+              public int varargsMethod(String... args) { return 1; }
 
               // overriden method
               @Override int superMethod(String y) { return 2; }
@@ -286,9 +297,14 @@ test!(
               // interface method
               public String interfaceMethod(int x, String y) { return y + x; }
 
-              private <T> void processChanges(List<T> myList, int k) {}
+              // native method
+              public native String nativeMethod(int x, String y);
 
-              private <T> void processChanges(T typeParam, int k) {}
+              // abstract method
+              abstract int abstractMethod(int x);
+
+              // synchronized method
+              synchronized int synchronizedMethod(int y) { return 1; }
             }
         "#
     };
@@ -304,6 +320,7 @@ test!(
         "SuperClass.java" => r#"
             class SuperClass {
                 int superMethod(String x) { return 1; }
+                final int superMethod2(String x) { return 1; }
             }
         "#
     };
@@ -315,10 +332,177 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
+        use dex::method::AccessFlags;
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
-        assert_eq!(class.methods().count(), 19);
-        assert_eq!(class.direct_methods().count(), 5);
-        assert_eq!(class.virtual_methods().count(), 14);
-        // TODO: test method access flags, params, annotations etc.
+        assert_eq!(class.direct_methods().count(), 9);
+        assert_eq!(class.virtual_methods().count(), 21);
+
+        let find = |name, params: &[&str], return_type: &str| {
+            let method = class.methods().find(|m| {
+                m.name() == name && 
+                    m.params().len() == params.len() && 
+                    m.params().iter().zip(params.iter()).all(|(left, right)| left == right) &&
+                    m.return_type() == &return_type
+            });
+            assert!(method.is_some(), format!("method: {}, params: {:?}, return_type: {}", name, params, return_type));
+            let method = method.unwrap();
+            method
+        };
+
+        let default_method = find(&"defaultMethod", &[], &"V");
+        assert!(default_method.code().is_some());
+        assert!(default_method.access_flags().is_empty());
+        assert_eq!(default_method.shorty(), &"V");
+
+        let final_method = find(&"finalMethod", &[], &"V");
+        assert!(final_method.code().is_some());
+        assert_has_access_flags!(final_method, [FINAL]);
+        assert_eq!(final_method.shorty(), &"V");
+
+        let static_method = find(&"staticMethod", &[], &"V");
+        assert!(static_method.code().is_some());
+        assert_has_access_flags!(static_method, [STATIC]);
+        assert_eq!(static_method.shorty(), &"V");
+
+        let public_method = find(&"publicMethod", &[], &"V");
+        assert!(public_method.code().is_some());
+        assert_has_access_flags!(public_method, [PUBLIC]);
+        assert_eq!(public_method.shorty(), &"V");
+
+        let private_method = find(&"privateMethod", &[], &"V");
+        assert!(private_method.code().is_some());
+        assert_has_access_flags!(private_method, [PRIVATE]);
+        assert_eq!(private_method.shorty(), &"V");
+
+        let protected_method = find(&"protectedMethod", &[], &"V");
+        assert!(protected_method.code().is_some());
+        assert_has_access_flags!(protected_method, [PROTECTED]);
+        assert_eq!(protected_method.shorty(), &"V");
+
+
+        let primitive_return_method = find(&"primitiveReturnMethod", &[], &"I");
+        assert!(primitive_return_method.code().is_some());
+        assert!(primitive_return_method.access_flags().is_empty());
+        assert_eq!(primitive_return_method.shorty(), &"I");
+
+        let class_return_method = find(&"classReturnMethod", &[], &"Ljava/lang/String;");
+        assert!(primitive_return_method.code().is_some());
+        assert!(class_return_method.access_flags().is_empty());
+        assert_eq!(class_return_method.shorty(), &"L");
+
+        let array_return_method = find(&"arrayReturnMethod", &[], &"[J");
+        assert!(array_return_method.code().is_some());
+        assert!(array_return_method.access_flags().is_empty());
+        assert_eq!(array_return_method.shorty(), &"L");
+
+        let object_array_return_method = find(&"objectArrayReturnMethod", &[], &"[Ljava/lang/String;");
+        assert!(object_array_return_method.code().is_some());
+        assert!(array_return_method.access_flags().is_empty());
+        assert!(object_array_return_method.access_flags().is_empty());
+        assert_eq!(object_array_return_method.shorty(), &"L");
+
+        let enum_return_method = find(&"enumReturnMethod", &[], &"LDay;");
+        assert!(enum_return_method.code().is_some());
+        assert!(enum_return_method.access_flags().is_empty());
+        assert_eq!(enum_return_method.shorty(), &"L");
+
+
+        let primitive_params_method = find(&"primitiveParams", &[&"C", &"S", &"B", &"I", &"J", &"Z", &"D", &"F"], &"I");
+        assert!(primitive_params_method.code().is_some());
+        assert!(primitive_params_method.access_flags().is_empty());
+        assert_eq!(primitive_params_method.shorty(), &"ICSBIJZDF");
+        
+        let class_params_method = find(&"classParams", &[&"Ljava/lang/String;", &"Ljava/lang/String;"], &"Ljava/lang/String;");
+        assert!(class_params_method.code().is_some());
+        assert!(class_params_method.access_flags().is_empty());
+        assert_eq!(class_params_method.shorty(), &"LLL");
+
+        let enum_params_method = find(&"enumParam", &[&"LDay;"], &"V");
+        assert!(enum_params_method.code().is_some());
+        assert!(enum_params_method.access_flags().is_empty());
+        assert_eq!(enum_params_method.shorty(), &"VL");
+        
+        let primitive_array_params_method = find(&"primitiveArrayParam", &[&"[J"], &"V");
+        assert!(primitive_array_params_method.code().is_some());
+        assert!(primitive_array_params_method.access_flags().is_empty());
+        assert_eq!(primitive_array_params_method.shorty(), &"VL");
+
+        let object_array_params_method = find(&"objectArrayParam", &["[Ljava/lang/String;"], &"V");
+        assert!(object_array_params_method.code().is_some());
+        assert!(object_array_params_method.access_flags().is_empty());
+        assert_eq!(object_array_params_method.shorty(), &"VL");
+
+        let interface_params_method = find(&"interfaceParam", &[&"LMyInterface;"], &"V");
+        assert!(interface_params_method.code().is_some());
+        assert!(interface_params_method.access_flags().is_empty());
+        assert_eq!(interface_params_method.shorty(), &"VL");
+
+        let generic_params_method  = find(&"genericParamsMethod1", &[&"Ljava/util/List;", &"I"], &"V");
+        assert!(generic_params_method.code().is_some());
+        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_eq!(generic_params_method.shorty(), &"VLI");
+
+        let generic_params_method  = find(&"genericParamsMethod2", &[&"Ljava/lang/Object;", &"I"], &"V");
+        assert!(generic_params_method.code().is_some());
+        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_eq!(generic_params_method.shorty(), &"VLI");
+
+        let generic_params_method  = find(&"genericParamsMethod3", &[&"Ljava/util/List;", &"I"], &"V");
+        assert!(generic_params_method.code().is_some());
+        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_eq!(generic_params_method.shorty(), &"VLI");
+
+        let generic_params_method  = find(&"genericParamsMethod4", &[&"Ljava/util/List;", &"I"], &"V");
+        assert!(generic_params_method.code().is_some());
+        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_eq!(generic_params_method.shorty(), &"VLI");
+
+
+        let generic_params_method  = find(&"genericParamWithExtendsClauseMethod", &[&"LSuperClass;"], &"V");
+        assert!(generic_params_method.code().is_some());
+        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_eq!(generic_params_method.shorty(), &"VL");
+
+        let generic_params_method  = find(&"genericParamWithMultipleExtendsClauseMethod", &[&"LSuperClass;"], &"V");
+        assert!(generic_params_method.code().is_some());
+        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_eq!(generic_params_method.shorty(), &"VL");
+
+
+        let varargs_method = find(&"varargsMethod", &[&"[Ljava/lang/String;"], &"I");
+        assert!(varargs_method.code().is_some());
+        assert_has_access_flags!(varargs_method, [PUBLIC, VARARGS]);
+        assert_eq!(varargs_method.shorty(), &"IL");
+
+
+        let super_method = find(&"superMethod", &[&"Ljava/lang/String;"], &"I");
+        assert!(super_method.code().is_some());
+        assert!(super_method.access_flags().is_empty());
+        assert_eq!(super_method.shorty(), &"IL");
+
+        let super_method2 = class.fields().find(|m| m.name() == &"superMethod2");
+        assert!(super_method2.is_none(), "super method 2 is not overriden, so it shouldn't be there");
+
+
+        let interface_method = find(&"interfaceMethod", &[&"I", &"Ljava/lang/String;"], "Ljava/lang/String;");
+        assert!(interface_method.code().is_some());
+        assert_has_access_flags!(interface_method, [PUBLIC]);
+        assert_eq!(interface_method.shorty(), &"LIL");
+
+
+        let native_method = find(&"nativeMethod", &[&"I", &"Ljava/lang/String;"], &"Ljava/lang/String;");
+        assert!(native_method.code().is_none());
+        assert_has_access_flags!(native_method, [PUBLIC, NATIVE]);
+        assert_eq!(native_method.shorty(), &"LIL");
+
+        let abstract_method = find(&"abstractMethod", &[&"I"], &"I");
+        assert!(abstract_method.code().is_none());
+        assert_has_access_flags!(abstract_method, [ABSTRACT]);
+        assert_eq!(abstract_method.shorty(), &"II");
+
+        let synchronized_method = find(&"synchronizedMethod", &[&"I"], &"I");
+        assert!(synchronized_method.code().is_some());
+        assert_has_access_flags!(synchronized_method, [DECLARED_SYNCHRONIZED]);
+        assert_eq!(synchronized_method.shorty(), &"II");
     }
 );

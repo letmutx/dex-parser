@@ -26,9 +26,15 @@ pub struct DexString {
     string: Rc<String>,
 }
 
-impl<S: AsRef<str>> PartialEq<S> for DexString {
-    fn eq(&self, other: &S) -> bool {
-        &*self.string == &*other.as_ref()
+impl PartialEq<str> for DexString {
+    fn eq(&self, other: &str) -> bool {
+        *self.string == other
+    }
+}
+
+impl<'a> PartialEq<&'a str> for DexString {
+    fn eq(&self, other: &&'a str) -> bool {
+        *self.string == *other
     }
 }
 

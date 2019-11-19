@@ -42,9 +42,15 @@ impl PartialEq<DexString> for Type {
     }
 }
 
-impl<S: AsRef<str>> PartialEq<S> for Type {
-    fn eq(&self, other: &S) -> bool {
-        self.type_descriptor() == &other.as_ref()
+impl PartialEq<str> for Type {
+    fn eq(&self, other: &str) -> bool {
+        self.type_descriptor() == other
+    }
+}
+
+impl<'a> PartialEq<&'a str> for Type {
+    fn eq(&self, other: &&'a str) -> bool {
+        self.type_descriptor() == *other
     }
 }
 

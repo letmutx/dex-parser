@@ -749,6 +749,6 @@ mod tests {
         let jtype = jtype.unwrap();
         assert!(jtype.is_some());
         let jtype = jtype.unwrap();
-        assert_eq!(&*jtype.type_descriptor(), &"Lorg/adw/launcher/Launcher;")
+        assert_eq!(jtype.type_descriptor(), "Lorg/adw/launcher/Launcher;")
     }
 }

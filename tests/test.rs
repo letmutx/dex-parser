@@ -386,7 +386,26 @@ test!(
     }
 );
 
-// TODO: test enums
+test!(
+    test_enums,
+    {
+        "EnumClass.java" => r#"
+            public enum EnumClass {
+               SUNDAY, MONDAY, TUESDAY, WEDNESDAY,
+               THURSDAY, FRIDAY, SATURDAY
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        use dex::class::AccessFlags;
+        let enum_class = dex.find_class_by_name(&"LEnumClass;");
+        assert!(enum_class.is_ok());
+        let enum_class = enum_class.unwrap();
+        assert!(enum_class.is_some());
+        let enum_class = enum_class.unwrap();
+        assert_has_access_flags!(enum_class, [ENUM]);
+    }
+);
 
 // TODO: test method annotations
 test!(

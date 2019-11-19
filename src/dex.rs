@@ -466,10 +466,10 @@ where
         self.find_class_by_type(type_id.unwrap())
     }
 
-    pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Option<Vec<Type>>> {
+    pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Vec<Type>> {
         debug!(target: "interfaces", "interfaces offset: {}", offset);
         if offset == 0 {
-            return Ok(None);
+            return Ok(Default::default());
         }
         if !self.is_offset_in_data_section(offset) {
             return Err(Error::BadOffset(
@@ -484,8 +484,7 @@ where
         debug!(target: "interfaces", "interfaces length: {}", len);
         let offset = &mut offset;
         let type_ids: Vec<ushort> = try_gread_vec_with!(source, offset, len, endian);
-        let types = utils::get_types(self, &type_ids)?;
-        Ok(Some(types))
+        utils::get_types(self, &type_ids)
     }
 
     pub(crate) fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {

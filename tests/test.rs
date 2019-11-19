@@ -175,12 +175,12 @@ test!(
     }
 );
 
-// TODO: add tests for interface fields, generic fields, initial values, annotations on fields
+// TODO: add tests for interface fields, initial values, annotations on fields
 test!(
     test_fields,
     {
         "Main.java" => r#"
-          class Main {
+          class Main<T, K extends Main> {
               public static int staticVar = 42;
               final double finalVar = 32.0d;
               private String privateField;
@@ -188,6 +188,8 @@ test!(
               protected String protectedField;
               int[] arrayField;
               Day enumField;
+              T genericField;
+              K genericField2;
           }
         "#
     };
@@ -203,34 +205,39 @@ test!(
         use dex::field::AccessFlags;
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
         assert_eq!(class.static_fields().count(), 1);
-        assert_eq!(class.instance_fields().count(), 6);
-        assert_eq!(class.fields().count(), 7);
-        let find = |name| { 
+        assert_eq!(class.instance_fields().count(), 8);
+        let find = |name, jtype| {
             let field = class.fields().find(|f| f.name() == name);
-            assert!(field.is_some());
-            field.unwrap()
+            assert!(field.is_some(), format!("name: {}, type: {}", name, jtype));
+            let field = field.unwrap();
+            assert_eq!(field.jtype(), jtype);
+            field
         };
-        let static_field = find(&"staticVar");
-        assert!(static_field.access_flags().contains(AccessFlags::STATIC));
-        assert!(static_field.access_flags().contains(AccessFlags::PUBLIC));
-        assert_eq!(static_field.jtype(), &"I");
+        let static_field = find(&"staticVar", &"I");
+        assert_has_access_flags!(static_field, [STATIC, PUBLIC]);
 
-        let final_field = find(&"finalVar");
-        assert!(final_field.access_flags().contains(AccessFlags::FINAL));
-        assert_eq!(final_field.jtype(), &"D");
+        let final_field = find(&"finalVar", &"D");
+        assert_has_access_flags!(final_field, [FINAL]);
 
-        let protected_field = find(&"protectedField");
-        assert!(protected_field.access_flags().contains(AccessFlags::PROTECTED));
-        assert_eq!(protected_field.jtype(), &"Ljava/lang/String;");
+        let protected_field = find(&"protectedField", &"Ljava/lang/String;");
+        assert_has_access_flags!(protected_field, [PROTECTED]);
 
-        let private_field = find(&"privateField");
-        assert!(private_field.access_flags().contains(AccessFlags::PRIVATE));
+        let private_field = find(&"privateField", &"Ljava/lang/String;");
+        assert_has_access_flags!(private_field, [PRIVATE]);
 
-        let public_field = find(&"publicField");
-        assert!(public_field.access_flags().contains(AccessFlags::PUBLIC));
+        let public_field = find(&"publicField", &"Ljava/lang/String;");
+        assert_has_access_flags!(public_field, [PUBLIC]);
 
-        let array_field = find(&"arrayField");
-        assert_eq!(array_field.jtype(), &"[I");
+        let array_field = find(&"arrayField", &"[I");
+        assert!(array_field.access_flags().is_empty());
+
+        let generic_field = find(&"genericField", &"Ljava/lang/Object;");
+        assert!(generic_field.access_flags().is_empty());
+
+        let generic_field = find(&"genericField2", &"LMain;");
+        assert!(generic_field.access_flags().is_empty());
+
+
 
         // TODO: find out why d8 fails with warning:
         // d8 is from build-tools:29.0.2

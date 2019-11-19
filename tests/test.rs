@@ -19,6 +19,7 @@ impl TestBuilder {
         }
     }
 
+    #[allow(unused)]
     pub fn add_file<Q: AsRef<Path>, P: AsRef<Path>>(&mut self, src: P, dest: Q) {
         let dest = self.root.path().join(dest);
         let src_display = src.as_ref().display();

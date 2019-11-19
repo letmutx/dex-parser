@@ -352,7 +352,41 @@ test!(
     }
 );
 
-// TODO: test enums, abstract classes
+test!(
+    test_abstract_classes,
+    {
+        "AbstractClass.java" => r#"
+            abstract class AbstractClass {
+                public static void staticMethod() {}
+                public final void finalMethod() {}
+                public abstract int abstractMethod();
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        use dex::class::AccessFlags;
+        let abstract_class = dex.find_class_by_name("LAbstractClass;");
+        assert!(abstract_class.is_ok());
+        let abstract_class = abstract_class.unwrap();
+        assert!(abstract_class.is_some());
+        let abstract_class = abstract_class.unwrap();
+        assert_has_access_flags!(abstract_class, [ABSTRACT]);
+        assert_eq!(abstract_class.methods().count(), 4);
+        let mut methods = abstract_class.methods().map(|m| m.name()).collect::<Vec<_>>();
+        methods.sort();
+        let expected = &mut [&"<init>", &"staticMethod", &"abstractMethod", &"finalMethod"];
+        expected.sort();
+        assert_eq!(&methods, expected);
+        let abstract_method = abstract_class.methods().find(|m| m.name() == &"abstractMethod").unwrap();
+        {
+            use dex::method::AccessFlags;
+            assert!(abstract_method.code().is_none());
+            assert_has_access_flags!(abstract_method, [PUBLIC, ABSTRACT]);
+        }
+    }
+);
+
+// TODO: test enums
 
 // TODO: test method annotations
 test!(

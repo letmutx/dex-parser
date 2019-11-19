@@ -253,7 +253,105 @@ test!(
     }
 );
 
-// TODO:  test interfaces, enums, abstract classes
+test!(
+    test_interface,
+    {
+        "MyInterface.java" => r#"
+            interface MyInterface {
+                int x = 115;
+                String j = "MyString";
+                int interfaceMethod(String x, char y);
+                default int interfaceMethod3(String y) {
+                    System.out.println(y);
+                    return 0;
+                }
+            }
+        "#
+    };
+    {
+        "MyInterface2.java" => r#"
+            public interface MyInterface2 extends MyInterface {
+                int interfaceMethod2(String y);
+                default int interfaceMethod(String x, char y) {
+                    System.out.println(x + y);
+                    return 0;
+                }
+            }
+        "#
+    };
+    {
+        "MyInterface3.java" => r#"
+            interface MyInterface3 {
+                static int interfaceMethod3() {
+                    return 3;
+                }
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        use dex::class::AccessFlags;
+        use dex::class::Class;
+        let validate_interface_methods = |interface: &Class| {
+            interface.methods().for_each(|m| {
+                use dex::method::AccessFlags;
+                assert_has_access_flags!(m, [PUBLIC, ABSTRACT], format!("interface method: {} doesn't have all attributes", m.name()));
+                assert!(m.code().is_none(), format!("interface method: {} shouldn't have code item", m.name()));
+            });
+        };
+        let validate_interface_fields = |interface: &Class| {
+            interface.fields().for_each(|f| {
+                use dex::field::AccessFlags;
+                assert_has_access_flags!(f, [PUBLIC, STATIC, FINAL], format!("interface field: {} doesn't have all attributes", f.name()));
+            });
+        };
+
+        let interface = dex.find_class_by_name("LMyInterface;");
+        assert!(interface.is_ok());
+        let interface = interface.unwrap();
+        assert!(interface.is_some());
+        let interface = interface.unwrap();
+        assert_has_access_flags!(interface, [INTERFACE]);
+        assert_eq!(interface.fields().count(), 2);
+        assert_eq!(interface.methods().count(), 2);
+        validate_interface_fields(&interface);
+        validate_interface_methods(&interface);
+
+        let interface2 = dex.find_class_by_name("LMyInterface2;");
+        assert!(interface2.is_ok());
+        let interface2 = interface2.unwrap();
+        assert!(interface2.is_some());
+        let interface2 = interface2.unwrap();
+        assert_has_access_flags!(interface2, [PUBLIC, INTERFACE]);
+        assert_eq!(interface2.methods().count(), 2);
+        assert_eq!(interface2.fields().count(), 0);
+        validate_interface_fields(&interface2);
+        validate_interface_methods(&interface2);
+        assert_eq!(interface2.interfaces(), &[interface.jtype().clone()]);
+
+        // static methods in an interface are moved to a generated class marked SYNTHETIC.
+        // HACK: name can be anything. but the current d8 generates a name that starts
+        // with the original interface's name.
+        let interface3 = dex.classes().find(|c| {
+            let c = c.as_ref().expect("error finding synthetic class");
+            c.jtype().type_descriptor().starts_with("LMyInterface3") &&
+            c.access_flags().contains(AccessFlags::SYNTHETIC)
+        });
+        assert!(interface3.is_some());
+        let interface3 = interface3.unwrap();
+        assert!(interface3.is_ok());
+        let interface3 = interface3.unwrap();
+        assert_eq!(interface3.methods().count(), 1);
+        let method = interface3.methods().take(1).next();
+        assert!(method.is_some());
+        let method = method.unwrap();
+        {
+            use dex::method::AccessFlags;
+            assert_has_access_flags!(method, [STATIC]);
+        }
+    }
+);
+
+// TODO: test enums, abstract classes
 
 // TODO: test method annotations
 test!(

@@ -70,6 +70,14 @@ impl TestBuilder {
     }
 }
 
+macro_rules! assert_has_access_flags {
+    ($item: ident, [ $($flag: ident),+ ]) => {
+        $(
+            assert!($item.access_flags().contains(AccessFlags::$flag));
+        )*
+    }
+}
+
 // TODO: support test attributes if necessary
 macro_rules! test {
     ($test_name: ident, $({ $fname:expr => $code:expr });+,$test_func:expr) => {

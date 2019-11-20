@@ -34,7 +34,7 @@ pub(crate) fn from_item<T, F, U>(
     f: F,
 ) -> Option<super::Result<Vec<U>>>
 where
-    F: Fn(T) -> super::Result<U>,
+    F: FnMut(T) -> super::Result<U>,
     T: EncodedItem,
 {
     array.map(|array| array.iter().map(f).collect())

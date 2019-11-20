@@ -353,6 +353,10 @@ impl<T> Dex<T>
 where
     T: AsRef<[u8]>,
 {
+    pub fn header(&self) -> &Header {
+        self.inner.header()
+    }
+
     pub(crate) fn is_offset_in_data_section(&self, offset: uint) -> bool {
         self.inner.data_section().contains(&offset)
     }
@@ -374,6 +378,16 @@ where
             )));
         }
         self.strings.get(string_id)
+    }
+
+    /// Returns the `Type` corresponding to the descriptor.
+    pub fn get_type_from_descriptor(&self, descriptor: &str) -> Result<Option<Type>> {
+        if let Some(string_id) = self.strings.get_id(descriptor)? {
+            if let Some(type_id) = self.get_type_id(string_id)? {
+                return Ok(Some(self.get_type(type_id)?));
+            }
+        }
+        Ok(None)
     }
 
     /// Returns the `Type` represented by the give type_id.
@@ -452,10 +466,10 @@ where
         self.find_class_by_type(type_id.unwrap())
     }
 
-    pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Option<Vec<Type>>> {
+    pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Vec<Type>> {
         debug!(target: "interfaces", "interfaces offset: {}", offset);
         if offset == 0 {
-            return Ok(None);
+            return Ok(Default::default());
         }
         if !self.is_offset_in_data_section(offset) {
             return Err(Error::BadOffset(
@@ -470,8 +484,7 @@ where
         debug!(target: "interfaces", "interfaces length: {}", len);
         let offset = &mut offset;
         let type_ids: Vec<ushort> = try_gread_vec_with!(source, offset, len, endian);
-        let types = utils::get_types(self, &type_ids)?;
-        Ok(Some(types))
+        utils::get_types(self, &type_ids)
     }
 
     pub(crate) fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
@@ -718,8 +731,24 @@ mod tests {
     fn test_find_class_by_name() {
         let dex =
             super::DexReader::from_file("resources/classes.dex").expect("cannot open dex file");
-        let class = dex.find_class_by_name("Lorg/adw/launcher/Launcher;");
-        assert!(class.is_ok());
-        assert!(class.unwrap().is_some());
+        for class_def in dex.class_defs() {
+            let class_def = class_def.expect("can't load class");
+            let jtype = dex.get_type(class_def.class_idx()).expect("bad type");
+            let result = dex.find_class_by_name(&jtype.type_descriptor().to_string());
+            assert!(result.is_ok());
+            assert!(result.unwrap().is_some());
+        }
+    }
+
+    #[test]
+    fn test_get_type_from_descriptor() {
+        let dex =
+            super::DexReader::from_file("resources/classes.dex").expect("cannot open dex file");
+        let jtype = dex.get_type_from_descriptor("Lorg/adw/launcher/Launcher;");
+        assert!(jtype.is_ok());
+        let jtype = jtype.unwrap();
+        assert!(jtype.is_some());
+        let jtype = jtype.unwrap();
+        assert_eq!(jtype.type_descriptor(), "Lorg/adw/launcher/Launcher;")
     }
 }

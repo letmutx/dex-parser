@@ -21,9 +21,21 @@ pub type StringId = uint;
 /// Strings in `Dex` file are encoded as MUTF-8 code units. DexString is a
 /// wrapper type for converting Dex strings into Rust strings.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#mutf-8)
-#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+#[derive(Debug, Hash, Eq, PartialEq, Clone, PartialOrd, Ord)]
 pub struct DexString {
     string: Rc<String>,
+}
+
+impl PartialEq<str> for DexString {
+    fn eq(&self, other: &str) -> bool {
+        *self.string == other
+    }
+}
+
+impl<'a> PartialEq<&'a str> for DexString {
+    fn eq(&self, other: &&'a str) -> bool {
+        *self.string == *other
+    }
 }
 
 impl fmt::Display for DexString {
@@ -34,7 +46,9 @@ impl fmt::Display for DexString {
 
 impl From<String> for DexString {
     fn from(string: String) -> Self {
-        DexString { string: Rc::new(string) }
+        DexString {
+            string: Rc::new(string),
+        }
     }
 }
 
@@ -63,11 +77,11 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for DexString {
         let size = *offset + bytes.len();
         Ok((
             DexString {
-                string: Rc::new(from_java_cesu8(bytes)
-                    .map_err(|e| {
-                        Error::MalFormed(format!("Malformed string: {:?}", e))
-                    })?
-                    .into_owned()),
+                string: Rc::new(
+                    from_java_cesu8(bytes)
+                        .map_err(|e| Error::MalFormed(format!("Malformed string: {:?}", e)))?
+                        .into_owned(),
+                ),
             },
             size,
         ))

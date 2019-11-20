@@ -57,7 +57,7 @@ pub struct Class {
     pub(crate) super_class: Option<ClassId>,
     /// List of the interfaces implemented by this class.
     #[get = "pub"]
-    pub(crate) interfaces: Option<Vec<Type>>,
+    pub(crate) interfaces: Vec<Type>,
     /// Annotations of the class, fields, methods and their parameters.
     #[get = "pub"]
     pub(crate) annotations: Option<AnnotationsDirectoryItem>,

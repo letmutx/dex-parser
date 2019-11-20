@@ -54,9 +54,9 @@ pub struct Method {
     access_flags: AccessFlags,
     /// Types of the parameters of the method.
     #[get = "pub"]
-    params: Option<Vec<Type>>,
-    /// Shorty descriptor of the method. Conforms to
-    /// https://source.android.com/devices/tech/dalvik/dex-format#shortydescriptor
+    params: Vec<Type>,
+    /// Shorty descriptor of the method, as described
+    /// [here](https://source.android.com/devices/tech/dalvik/dex-format#shortydescriptor)
     #[get = "pub"]
     shorty: DexString,
     /// Return type of the method.
@@ -122,9 +122,9 @@ impl Method {
             let endian = dex.get_endian();
             let len = source.gread_with::<uint>(offset, endian)?;
             let type_ids: Vec<ushort> = try_gread_vec_with!(source, offset, len, endian);
-            Some(utils::get_types(dex, &type_ids)?)
+            utils::get_types(dex, &type_ids)?
         } else {
-            None
+            Default::default()
         };
         debug!(target: "method", "code item offset: {}", encoded_method.code_offset);
         let code = dex.get_code_item(encoded_method.code_offset)?;

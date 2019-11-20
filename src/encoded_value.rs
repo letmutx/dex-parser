@@ -185,16 +185,12 @@ where
 }
 
 /// Array of `EncodedValue`s
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct EncodedArray {
     values: Vec<EncodedValue>,
 }
 
 impl EncodedArray {
-    pub(crate) fn new() -> Self {
-        EncodedArray { values: Vec::new() }
-    }
-
     pub(crate) fn into_inner(self) -> Vec<EncodedValue> {
         self.values
     }

@@ -658,7 +658,7 @@ where
     pub(crate) fn get_static_values(&self, static_values_off: uint) -> Result<EncodedArray> {
         debug!(target: "class", "static values offset: {}", static_values_off);
         if static_values_off == 0 {
-            return Ok(EncodedArray::new());
+            return Ok(Default::default());
         }
         if !self.is_offset_in_data_section(static_values_off) {
             return Err(Error::BadOffset(

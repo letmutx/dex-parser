@@ -72,10 +72,17 @@ enum ValueType {
 
 macro_rules! try_zero_extended_gread {
     ($source:expr,$offset:expr,$value_arg:expr,$size:expr) => {{
+        if *$offset + $value_arg >= $source.len() {
+            return Err(Error::Scroll(scroll::Error::TooBig {
+                    size: *$offset + $value_arg,
+                    len: $source.len()
+            }));
+        }
         let mut bytes = [0x0; $size];
-        for (i, value) in $source[1..=$value_arg].iter().enumerate() {
+        for (i, value) in $source[*$offset..=*$offset+$value_arg].iter().enumerate() {
             bytes[i] = *value;
         }
+        debug!(target: "encoded-value", "bytes: {:?}", bytes);
         let value = bytes.pread_with(0, LE)?;
         *$offset += 1 + $value_arg;
         value
@@ -97,7 +104,7 @@ where
         let value_type = 0b0001_1111 & header;
         let value_type = ValueType::from_u8(value_type)
             .ok_or_else(|| Error::InvalidId(format!("Invalid value type {}", value_type)))?;
-        debug!(target: "encoded-value", "encoded value type: {:?}", value_type);
+        debug!(target: "encoded-value", "encoded value type: {:?}, value_arg: {}", value_type, value_arg);
         let value = match value_type {
             ValueType::Byte => {
                 debug_assert_eq!(value_arg, 0);

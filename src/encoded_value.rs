@@ -1,10 +1,10 @@
 //! Contains structures defining values in a `Dex`.
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
 use scroll::LE;
+use scroll::{self, ctx};
 
 use crate::annotation::EncodedAnnotation;
 use crate::error::Error;
@@ -17,17 +17,17 @@ use crate::method::MethodIdItem;
 use crate::method::ProtoIdItem;
 use crate::short;
 use crate::string::DexString;
-use crate::ubyte;
 use crate::uint;
 use crate::ulong;
 use crate::ushort;
 use crate::Result;
+use crate::{byte, ubyte};
 
 /// Used to represent values of fields, annotations etc.
 /// https://source.android.com/devices/tech/dalvik/dex-format#encoding
 #[derive(Debug)]
 pub enum EncodedValue {
-    Byte(ubyte),
+    Byte(byte),
     Short(short),
     Char(ushort),
     Int(int),

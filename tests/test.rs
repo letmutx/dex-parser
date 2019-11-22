@@ -255,6 +255,72 @@ test!(
 );
 
 test!(
+    test_field_values,
+    {
+        "FieldValues.java" => r#"
+            import java.util.function.BiFunction;
+            class FieldValues {
+                private final static byte b = 120;
+                private final static byte nb = -100;
+                private final static short s = 10000;
+                private final static short ns = -12048;
+                private final static int i = 12540;
+                private final static int ni = -12540;
+                private final static long l = 43749374797L;
+                private final static long nl = -43749374797L;
+                private final static float f = 9.30f;
+                private final static float nf = -9.34f;
+                private final static double d = 4374.9437493749374d;
+                private final static double nd = -1257.9374937493d;
+                private final static boolean bo = true;
+                private final static boolean nbo = false;
+                private final static char c = 'm';
+                private final static String nullString = null;
+                private final static String nonNullString = "fjdljfdlj";
+                private final static BiFunction<String, Integer, Integer> remapper = (k, v) -> v == null ? 42 : v + 41;
+                private final static Runnable r = () -> { System.out.println("runnable"); };
+                private final static int[] array = new int[]{1, 2, 3};
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        use dex::string::DexString;
+        use dex::encoded_value::EncodedValue;
+        let class = dex.find_class_by_name("LFieldValues;").expect("error getting FieldValues.class").expect("class not found");
+        assert_eq!(class.fields().count(), 20);
+        let get_value = |name| {
+            let field = class.fields().find(|f| f.name() == name);
+            assert!(field.is_some(), "field: {}", name);
+            let field = field.unwrap();
+            field.initial_value()
+        };
+        assert_eq!(*get_value("b"), Some(EncodedValue::Byte(120)));
+        assert_eq!(*get_value("nb"), Some(EncodedValue::Byte(-100)));
+        assert_eq!(*get_value("s"), Some(EncodedValue::Short(10000)));
+        // TODO: fix sign-extended numbers
+        //assert_eq!(*get_value("ns"), Some(EncodedValue::Short(-12048)));
+        assert_eq!(*get_value("i"), Some(EncodedValue::Int(12540)));
+        // TODO: fix sign-extended numbers
+        // assert_eq!(*get_value("ni"), Some(EncodedValue::Int(-12540)));
+        assert_eq!(*get_value("l"), Some(EncodedValue::Long(43749374797)));
+        // TODO: fix sign-extended numbers
+        // assert_eq!(*get_value("nl"), Some(EncodedValue::Long(-43749374797)));
+        assert_eq!(*get_value("f"), Some(EncodedValue::Float(9.30)));
+        assert_eq!(*get_value("nf"), Some(EncodedValue::Float(-9.34)));
+        assert_eq!(*get_value("d"), Some(EncodedValue::Double(4374.943749374937)));
+        assert_eq!(*get_value("nd"), Some(EncodedValue::Double(-1257.9374937493)));
+        assert_eq!(*get_value("bo"), Some(EncodedValue::Boolean(true)));
+        assert_eq!(*get_value("nbo"), Some(EncodedValue::Boolean(false)));
+        assert_eq!(*get_value("c"), Some(EncodedValue::Char(b'm'.into())));
+        assert_eq!(*get_value("nullString"), Some(EncodedValue::Null));
+        assert_eq!(*get_value("nonNullString"), Some(EncodedValue::String(DexString::from("fjdljfdlj".to_string()))));
+        assert_eq!(*get_value("remapper"), Some(EncodedValue::Null));
+        assert_eq!(*get_value("r"), Some(EncodedValue::Null));
+        assert_eq!(*get_value("array"), Some(EncodedValue::Null));
+    }
+);
+
+test!(
     test_interface,
     {
         "MyInterface.java" => r#"

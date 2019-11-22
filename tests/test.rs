@@ -242,14 +242,8 @@ test!(
         let generic_field = find("genericField2", "LMain;");
         assert!(generic_field.access_flags().is_empty());
 
-
-
-        // TODO: find out why d8 fails with warning:
-        // d8 is from build-tools:29.0.2
-        // Type `java.lang.Enum` was not found, it is required for default or static interface
-        // methods desugaring of `Day Day.valueOf(java.lang.String)`
-        // let enum_field = find("enumField");
-        // assert!(enum_field.access_flags().contains(AccessFlags::ENUM));
+        let enum_field = find("enumField", "LDay;");
+        assert!(enum_field.access_flags().is_empty());
         
     }
 );
@@ -467,6 +461,14 @@ test!(
         assert!(enum_class.is_some());
         let enum_class = enum_class.unwrap();
         assert_has_access_flags!(enum_class, [ENUM]);
+
+        {
+            use dex::field::AccessFlags;
+            let sunday = enum_class.fields().find(|f| f.name() == "SUNDAY");
+            assert!(sunday.is_some());
+            let sunday = sunday.unwrap();
+            assert_has_access_flags!(sunday, [ENUM]);
+        }
     }
 );
 

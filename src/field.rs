@@ -81,7 +81,7 @@ pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
 /// Defines a `Field`
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-id-item)
-#[derive(Pread, Debug, Getters)]
+#[derive(Pread, Debug, Getters, PartialEq)]
 #[get = "pub"]
 pub struct FieldIdItem {
     /// Index into `TypeId`s list which contains the defining class's `Type`.

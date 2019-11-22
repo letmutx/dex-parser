@@ -24,8 +24,8 @@ use crate::Result;
 use crate::{byte, ubyte};
 
 /// Used to represent values of fields, annotations etc.
-/// https://source.android.com/devices/tech/dalvik/dex-format#encoding
-#[derive(Debug)]
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoding)
+#[derive(Debug, PartialEq)]
 pub enum EncodedValue {
     Byte(byte),
     Short(short),
@@ -47,7 +47,7 @@ pub enum EncodedValue {
     Boolean(bool),
 }
 
-/// https://source.android.com/devices/tech/dalvik/dex-format#value-formats
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#value-formats)
 #[derive(FromPrimitive, Debug)]
 enum ValueType {
     Byte = 0x00,
@@ -112,6 +112,7 @@ where
             }
             ValueType::Short => {
                 debug_assert!(value_arg < 2);
+                // TODO: should be sign-extended
                 EncodedValue::Short(try_zero_extended_gread!(source, offset, value_arg, 2))
             }
             ValueType::Char => {
@@ -120,10 +121,12 @@ where
             }
             ValueType::Int => {
                 debug_assert!(value_arg < 4);
+                // TODO: should be sign-extended
                 EncodedValue::Int(try_zero_extended_gread!(source, offset, value_arg, 4))
             }
             ValueType::Long => {
                 debug_assert!(value_arg < 8);
+                // TODO: should be sign-extended
                 EncodedValue::Long(try_zero_extended_gread!(source, offset, value_arg, 8))
             }
             ValueType::Float => {

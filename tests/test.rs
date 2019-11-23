@@ -297,14 +297,11 @@ test!(
         assert_eq!(*get_value("b"), Some(EncodedValue::Byte(120)));
         assert_eq!(*get_value("nb"), Some(EncodedValue::Byte(-100)));
         assert_eq!(*get_value("s"), Some(EncodedValue::Short(10000)));
-        // TODO: fix sign-extended numbers
-        //assert_eq!(*get_value("ns"), Some(EncodedValue::Short(-12048)));
+        assert_eq!(*get_value("ns"), Some(EncodedValue::Short(-12048)));
         assert_eq!(*get_value("i"), Some(EncodedValue::Int(12540)));
-        // TODO: fix sign-extended numbers
-        // assert_eq!(*get_value("ni"), Some(EncodedValue::Int(-12540)));
+        assert_eq!(*get_value("ni"), Some(EncodedValue::Int(-12540)));
         assert_eq!(*get_value("l"), Some(EncodedValue::Long(43749374797)));
-        // TODO: fix sign-extended numbers
-        // assert_eq!(*get_value("nl"), Some(EncodedValue::Long(-43749374797)));
+        assert_eq!(*get_value("nl"), Some(EncodedValue::Long(-43749374797)));
         assert_eq!(*get_value("f"), Some(EncodedValue::Float(9.30)));
         assert_eq!(*get_value("nf"), Some(EncodedValue::Float(-9.34)));
         assert_eq!(*get_value("d"), Some(EncodedValue::Double(4374.943749374937)));

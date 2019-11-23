@@ -23,6 +23,7 @@ Some tests contains Java code and require `javac` and [d8](https://developer.and
 
 * To get `d8`, you need to install Android SDK and add `Android/Sdk/build-tools/<version>/` directory to PATH variable.
 * For `javac`, you need to install Java.
+* Also, `ANDROID_LIB_PATH` variable needs to be set in the environment. It should point to the `android.jar` file in the SDK. (ex: `Android/Sdk/platforms/android-<version>/android.jar`). This is needed to prevent warnings when running `d8`.
 
 ## Contributing
 All contributions are welcome! Feel free to raise issues/PRs on Github if you find a bug, have a question or think something can be improved!

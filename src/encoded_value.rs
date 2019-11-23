@@ -70,8 +70,8 @@ enum ValueType {
     Boolean = 0x1f,
 }
 
-macro_rules! try_zero_extended_gread {
-    ($source:expr,$offset:expr,$value_arg:expr,$size:expr) => {{
+macro_rules! try_extended_gread {
+    ($source:expr,$offset:expr,$value_arg:expr,$size:expr,$sign_extended:literal) => {{
         if *$offset + $value_arg >= $source.len() {
             return Err(Error::Scroll(scroll::Error::TooBig {
                     size: *$offset + $value_arg,
@@ -79,14 +79,38 @@ macro_rules! try_zero_extended_gread {
             }));
         }
         let mut bytes = [0x0; $size];
-        for (i, value) in $source[*$offset..=*$offset+$value_arg].iter().enumerate() {
+        let (mut i, mut last_byte_is_neg) = (0, false);
+        for value in $source[*$offset..=*$offset+$value_arg].iter() {
             bytes[i] = *value;
+            i += 1;
+            last_byte_is_neg = (*value as byte) < 0;
+        }
+        // fill the rest of the bytes with the value of the sign bit
+        // if the last byte is negative, sign bit is 1. so we fill it
+        // with 0xFF, for positive values sign bit is 0, so we don't need
+        // to do anything
+        // ref. https://en.wikipedia.org/wiki/Sign_extension
+        if $sign_extended && last_byte_is_neg {
+            while i < $size {
+                bytes[i] = 0xFF;
+                i += 1;
+            }
         }
         debug!(target: "encoded-value", "bytes: {:?}", bytes);
         let value = bytes.pread_with(0, LE)?;
         *$offset += 1 + $value_arg;
         value
     }};
+    ($source:expr, $offset:expr, $value_arg:expr, $size:expr, ZERO) => {{
+        try_extended_gread!($source, $offset, $value_arg, $size, false)
+    }};
+    ($source:expr, $offset:expr, $value_arg:expr, $size:expr, SIGN) => {{
+        try_extended_gread!($source, $offset, $value_arg, $size, true)
+    }};
+    ($source:expr, $offset:expr, $value_arg:expr, $size:expr) => {{
+        try_extended_gread!($source, $offset, $value_arg, $size, ZERO)
+    }};
+
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedValue
@@ -108,68 +132,65 @@ where
         let value = match value_type {
             ValueType::Byte => {
                 debug_assert_eq!(value_arg, 0);
-                EncodedValue::Byte(try_zero_extended_gread!(source, offset, value_arg, 1))
+                EncodedValue::Byte(try_extended_gread!(source, offset, value_arg, 1))
             }
             ValueType::Short => {
                 debug_assert!(value_arg < 2);
-                // TODO: should be sign-extended
-                EncodedValue::Short(try_zero_extended_gread!(source, offset, value_arg, 2))
+                EncodedValue::Short(try_extended_gread!(source, offset, value_arg, 2, SIGN))
             }
             ValueType::Char => {
                 debug_assert!(value_arg < 2);
-                EncodedValue::Char(try_zero_extended_gread!(source, offset, value_arg, 2))
+                EncodedValue::Char(try_extended_gread!(source, offset, value_arg, 2))
             }
             ValueType::Int => {
                 debug_assert!(value_arg < 4);
-                // TODO: should be sign-extended
-                EncodedValue::Int(try_zero_extended_gread!(source, offset, value_arg, 4))
+                EncodedValue::Int(try_extended_gread!(source, offset, value_arg, 4, SIGN))
             }
             ValueType::Long => {
                 debug_assert!(value_arg < 8);
-                // TODO: should be sign-extended
-                EncodedValue::Long(try_zero_extended_gread!(source, offset, value_arg, 8))
+                EncodedValue::Long(try_extended_gread!(source, offset, value_arg, 8, SIGN))
             }
             ValueType::Float => {
                 debug_assert!(value_arg < 4);
-                EncodedValue::Float(try_zero_extended_gread!(source, offset, value_arg, 4))
+                EncodedValue::Float(try_extended_gread!(source, offset, value_arg, 4))
             }
             ValueType::Double => {
                 debug_assert!(value_arg < 8);
-                EncodedValue::Double(try_zero_extended_gread!(source, offset, value_arg, 8))
+                EncodedValue::Double(try_extended_gread!(source, offset, value_arg, 8))
             }
             ValueType::MethodType => {
                 debug_assert!(value_arg < 4);
-                let proto_id: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                let proto_id: uint = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::MethodType(dex.get_proto_item(u64::from(proto_id))?)
             }
             ValueType::MethodHandle => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::MethodHandle(dex.get_method_handle_item(index)?)
             }
             ValueType::String => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::String(dex.get_string(index)?)
             }
             ValueType::Type => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Type(dex.get_type(index)?)
             }
             ValueType::Field => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Field(dex.get_field_item(ulong::from(index))?)
             }
             ValueType::Method => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Method(dex.get_method_item(ulong::from(index))?)
             }
             ValueType::Enum => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_zero_extended_gread!(source, offset, value_arg, 4);
+                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::Enum(dex.get_field_item(ulong::from(index))?)
             }
             ValueType::Array => {

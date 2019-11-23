@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::env;
 
 use tempfile::TempDir;
 
@@ -54,6 +55,7 @@ impl TestBuilder {
     }
 
     fn compile(&self) -> PathBuf {
+        let android_lib_path = env::var("ANDROID_LIB_PATH").expect("$ANDROID_LIB_PATH not set");
         let _javac = Command::new("javac")
             .args(&self.sources)
             .current_dir(self.root.path())
@@ -63,6 +65,7 @@ impl TestBuilder {
         assert!(classes.len() > 0);
         let _d8 = Command::new("d8")
             .args(&classes)
+            .args(&["--lib", &android_lib_path])
             .args(&["--output", &self.root.path().display().to_string()])
             .current_dir(self.root.path())
             .status()

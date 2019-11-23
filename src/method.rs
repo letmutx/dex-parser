@@ -72,7 +72,7 @@ pub type ProtoId = ulong;
 
 /// Method Prototypes.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#proto-id-item)
-#[derive(Pread, Debug, CopyGetters)]
+#[derive(Pread, Debug, CopyGetters, PartialEq)]
 #[get_copy = "pub"]
 pub struct ProtoIdItem {
     /// Index into the string_ids list for the short-form descriptor string of this prototype
@@ -147,7 +147,7 @@ impl Method {
 
 /// Method identifier.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-id-item)
-#[derive(Pread, Debug, CopyGetters)]
+#[derive(Pread, Debug, CopyGetters, PartialEq)]
 #[get_copy = "pub"]
 pub struct MethodIdItem {
     /// Index into the `TypeId`s list for the definer of this method.
@@ -219,7 +219,7 @@ impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
 
 /// Type of the method handle.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-handle-type-codes)
-#[derive(FromPrimitive, Debug, Clone, Copy)]
+#[derive(FromPrimitive, Debug, Clone, Copy, PartialEq)]
 pub enum MethodHandleType {
     StaticPut = 0x00,
     StaticGet = 0x01,
@@ -232,7 +232,7 @@ pub enum MethodHandleType {
     InvokeInterface = 0x08,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FieldOrMethodId {
     Field(FieldId),
     Method(MethodId),
@@ -240,7 +240,7 @@ pub enum FieldOrMethodId {
 
 /// A method handle.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-handle-item)
-#[derive(Debug, CopyGetters)]
+#[derive(Debug, CopyGetters, PartialEq)]
 #[get_copy = "pub"]
 pub struct MethodHandleItem {
     ///  The type of this MethodHandleItem.

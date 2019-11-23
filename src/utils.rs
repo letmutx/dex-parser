@@ -1,7 +1,6 @@
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
-use crate::jtype::Type;
-use crate::uint;
+use crate::jtype::{Type, TypeId};
 use crate::ushort;
 
 macro_rules! try_gread_vec_with {
@@ -34,7 +33,7 @@ pub(crate) fn from_item<T, F, U>(
     f: F,
 ) -> Option<super::Result<Vec<U>>>
 where
-    F: Fn(T) -> super::Result<U>,
+    F: FnMut(T) -> super::Result<U>,
     T: EncodedItem,
 {
     array.map(|array| array.iter().map(f).collect())
@@ -45,7 +44,7 @@ macro_rules! try_from_item {
         use crate::utils::from_item;
         match from_item($array, $closure) {
             Some(v) => v?,
-            None => Vec::new(),
+            None => Default::default(),
         }
     }};
 }
@@ -56,6 +55,6 @@ where
 {
     type_ids
         .iter()
-        .map(|type_id| dex.get_type(uint::from(*type_id)))
+        .map(|type_id| dex.get_type(TypeId::from(*type_id)))
         .collect()
 }

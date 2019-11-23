@@ -4,6 +4,7 @@ use scroll::{ctx, Pread, Uleb128};
 use crate::class::ClassId;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
+use crate::encoded_value::EncodedValue;
 use crate::error::Error;
 use crate::jtype::Type;
 use crate::string::DexString;
@@ -44,12 +45,18 @@ pub struct Field {
     /// Access flags for the field.
     #[get_copy = "pub"]
     access_flags: AccessFlags,
+    /// Initial value of the field. Always `None` for non-static fields.
+    /// If the value is `None`, it is not guaranteed that initial_value is `null`
+    /// at runtime. The field might be initialized in `<clinit>` method.
+    #[get = "pub"]
+    initial_value: Option<EncodedValue>,
 }
 
 impl Field {
     pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         encoded_field: &EncodedField,
+        initial_value: Option<EncodedValue>,
     ) -> super::Result<Self> {
         debug!(target: "field", "encoded field: {:?}", encoded_field);
         let field_item = dex.get_field_item(encoded_field.field_id)?;
@@ -64,6 +71,7 @@ impl Field {
                     field_item.name_idx
                 ))
             })?,
+            initial_value,
         })
     }
 }
@@ -73,7 +81,7 @@ pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
 /// Defines a `Field`
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-id-item)
-#[derive(Pread, Debug, Getters)]
+#[derive(Pread, Debug, Getters, PartialEq)]
 #[get = "pub"]
 pub struct FieldIdItem {
     /// Index into `TypeId`s list which contains the defining class's `Type`.

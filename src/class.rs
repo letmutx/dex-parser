@@ -7,7 +7,6 @@ use scroll::{Pread, Uleb128};
 
 use crate::annotation::AnnotationsDirectoryItem;
 use crate::encoded_item::EncodedItemArrayCtx;
-use crate::encoded_value::EncodedArray;
 use crate::error::Error;
 use crate::field::EncodedFieldArray;
 use crate::field::Field;
@@ -72,10 +71,6 @@ pub struct Class {
     pub(crate) direct_methods: Vec<Method>,
     /// List of parent class methods overriden by this class.
     pub(crate) virtual_methods: Vec<Method>,
-    /// Values of the static fields in the same order as static fields.
-    /// Other static fields assume `0` or `null` values.
-    #[get = "pub"]
-    pub(crate) static_values: EncodedArray,
 }
 
 impl Class {
@@ -120,21 +115,28 @@ impl Class {
 
         let data_off = class_def.class_data_off;
 
+        let static_values = dex.get_static_values(class_def.static_values_off)?;
         let (static_fields, instance_fields, direct_methods, virtual_methods) = dex
             .get_class_data(data_off)?
-            .map(|c| {
-                let ef = |encoded_field| dex.get_field(&encoded_field);
+            .map(move |c| {
+                let mut static_values = static_values.into_inner();
+                // the order of static values corresponds to the fields list.
+                // reversing the values so that the pop below returns values in
+                // correct order.
+                static_values.reverse();
                 let em = |encoded_method| dex.get_method(&encoded_method);
                 Ok((
-                    try_from_item!(c.static_fields, ef),
-                    try_from_item!(c.instance_fields, ef),
+                    try_from_item!(c.static_fields, |encoded_field| {
+                        dex.get_field(&encoded_field, static_values.pop())
+                    }),
+                    try_from_item!(c.instance_fields, |encoded_field| {
+                        dex.get_field(&encoded_field, None)
+                    }),
                     try_from_item!(c.direct_methods, em),
                     try_from_item!(c.virtual_methods, em),
                 ))
             })
-            .unwrap_or_else(|| Ok::<_, Error>((Vec::new(), Vec::new(), Vec::new(), Vec::new())))?;
-
-        let static_values = dex.get_static_values(class_def.static_values_off)?;
+            .unwrap_or_else(|| Ok::<_, Error>(Default::default()))?;
 
         let annotations = dex.get_annotations_directory_item(class_def.annotations_off)?;
         debug!(target: "class", "super class id: {}", class_def.superclass_idx);
@@ -162,7 +164,6 @@ impl Class {
             instance_fields,
             direct_methods,
             virtual_methods,
-            static_values,
         })
     }
 }

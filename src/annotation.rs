@@ -18,7 +18,7 @@ use num_traits::FromPrimitive;
 
 /// Contains the type and parameters of an Annotation.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoded-annotation)
-#[derive(Debug, Getters, CopyGetters)]
+#[derive(Debug, Getters, CopyGetters, PartialEq)]
 pub struct EncodedAnnotation {
     /// Type of the annotation. Should be a class type.
     #[get_copy = "pub"]
@@ -49,7 +49,7 @@ where
 /// Represents a parameter of an annotation. For example, if `@Author(name = "Benjamin Franklin")`, is
 /// the annotation, this structure represents `name = "Benjamin Franklin"`.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotation-element)
-#[derive(Debug, Getters, CopyGetters)]
+#[derive(Debug, Getters, CopyGetters, PartialEq)]
 pub struct AnnotationElement {
     /// Name of the element. Should conform to
     /// https://source.android.com/devices/tech/dalvik/dex-format#membername

@@ -20,7 +20,7 @@ use crate::class::ClassDataItem;
 use crate::class::ClassDefItem;
 use crate::class::ClassDefItemIter;
 use crate::code::{CodeItem, DebugInfoItem};
-use crate::encoded_value::EncodedArray;
+use crate::encoded_value::{EncodedArray, EncodedValue};
 use crate::error::{self, Error};
 use crate::field::EncodedField;
 use crate::field::Field;
@@ -537,8 +537,12 @@ where
         StringsIter::new(self.strings.clone(), self.inner.strings_len() as usize)
     }
 
-    pub(crate) fn get_field(&self, encoded_field: &EncodedField) -> Result<Field> {
-        Field::try_from_dex(self, encoded_field)
+    pub(crate) fn get_field(
+        &self,
+        encoded_field: &EncodedField,
+        initial_value: Option<EncodedValue>,
+    ) -> Result<Field> {
+        Field::try_from_dex(self, encoded_field, initial_value)
     }
 
     pub(crate) fn get_method(&self, encoded_method: &EncodedMethod) -> Result<Method> {
@@ -654,7 +658,7 @@ where
     pub(crate) fn get_static_values(&self, static_values_off: uint) -> Result<EncodedArray> {
         debug!(target: "class", "static values offset: {}", static_values_off);
         if static_values_off == 0 {
-            return Ok(EncodedArray::new());
+            return Ok(Default::default());
         }
         if !self.is_offset_in_data_section(static_values_off) {
             return Err(Error::BadOffset(

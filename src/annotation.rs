@@ -2,6 +2,7 @@
 use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
+use std::ops::Deref;
 
 use getset::{CopyGetters, Getters};
 
@@ -26,6 +27,14 @@ pub struct EncodedAnnotation {
     /// Elements of the annotation
     #[get = "pub"]
     elements: Vec<AnnotationElement>,
+}
+
+impl Deref for EncodedAnnotation {
+    type Target = Vec<AnnotationElement>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.elements
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedAnnotation
@@ -101,6 +110,14 @@ pub struct AnnotationItem {
     annotation: EncodedAnnotation,
 }
 
+impl Deref for AnnotationItem {
+    type Target = EncodedAnnotation;
+
+    fn deref(&self) -> &Self::Target {
+        &self.annotation
+    }
+}
+
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationItem
 where
     S: AsRef<[u8]>,
@@ -131,6 +148,14 @@ where
 #[get = "pub"]
 pub struct AnnotationSetRefList {
     annotation_set_list: Vec<AnnotationSetItem>,
+}
+
+impl Deref for AnnotationSetRefList {
+    type Target = Vec<AnnotationSetItem>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.annotation_set_list
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationSetRefList
@@ -166,6 +191,14 @@ where
 #[get = "pub"]
 pub struct AnnotationSetItem {
     annotations: Vec<AnnotationItem>,
+}
+
+impl Deref for AnnotationSetItem {
+    type Target = Vec<AnnotationItem>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.annotations
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationSetItem

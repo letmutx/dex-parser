@@ -229,16 +229,15 @@ where
 /// Annotations of a `Method`'s parameters.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#parameter-annotation)
 #[derive(Debug, Getters, CopyGetters)]
-pub struct ParameterAnnotation {
+pub struct ParameterAnnotations {
     /// The method this parameter belongs to.
     #[get_copy = "pub"]
     method_idx: MethodId,
     /// The list of annotation sets for the parameters.
-    #[get = "pub"]
-    annotations: AnnotationSetRefList,
+    pub(crate) annotations: AnnotationSetRefList,
 }
 
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ParameterAnnotation
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ParameterAnnotations
 where
     S: AsRef<[u8]>,
 {
@@ -264,14 +263,13 @@ where
 /// Annotations of a `Method`.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-annotation)
 #[derive(Debug, Getters, CopyGetters)]
-pub struct MethodAnnotation {
+pub struct MethodAnnotations {
     #[get_copy = "pub"]
     method_idx: MethodId,
-    #[get = "pub"]
-    annotations: AnnotationSetItem,
+    pub(crate) annotations: AnnotationSetItem,
 }
 
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for MethodAnnotation
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for MethodAnnotations
 where
     S: AsRef<[u8]>,
 {
@@ -296,14 +294,14 @@ where
 /// Annotations of a `Field`.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-annotation)
 #[derive(Debug, Getters, CopyGetters)]
-pub struct FieldAnnotation {
+pub struct FieldAnnotations {
     #[get_copy = "pub"]
     field_idx: FieldId,
     #[get = "pub"]
-    annotations: AnnotationSetItem,
+    pub(crate) annotations: AnnotationSetItem,
 }
 
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for FieldAnnotation
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for FieldAnnotations
 where
     S: AsRef<[u8]>,
 {

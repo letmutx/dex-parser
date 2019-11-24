@@ -541,12 +541,23 @@ where
         &self,
         encoded_field: &EncodedField,
         initial_value: Option<EncodedValue>,
+        annotations: AnnotationSetItem,
     ) -> Result<Field> {
-        Field::try_from_dex(self, encoded_field, initial_value)
+        Field::try_from_dex(self, encoded_field, initial_value, annotations)
     }
 
-    pub(crate) fn get_method(&self, encoded_method: &EncodedMethod) -> Result<Method> {
-        Method::try_from_dex(self, encoded_method)
+    pub(crate) fn get_method(
+        &self,
+        encoded_method: &EncodedMethod,
+        method_annotations: AnnotationSetItem,
+        parameter_annotations: AnnotationSetRefList,
+    ) -> Result<Method> {
+        Method::try_from_dex(
+            self,
+            encoded_method,
+            method_annotations,
+            parameter_annotations,
+        )
     }
 
     pub(crate) fn get_class_data(&self, offset: uint) -> Result<Option<ClassDataItem>> {

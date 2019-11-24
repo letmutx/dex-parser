@@ -88,7 +88,7 @@ where
 
 /// Visibility of an annotation.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#visibility)
-#[derive(Debug, FromPrimitive, Copy, Clone)]
+#[derive(Debug, FromPrimitive, Copy, Clone, PartialEq)]
 pub enum Visibility {
     /// Visible only to the Build system.
     Build = 0x0,

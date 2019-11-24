@@ -623,10 +623,10 @@ where
     pub(crate) fn get_annotation_set_item(
         &self,
         annotation_set_item_off: uint,
-    ) -> Result<Option<AnnotationSetItem>> {
+    ) -> Result<AnnotationSetItem> {
         debug!(target: "annotation-set-item", "annotation set item offset: {}", annotation_set_item_off);
         if annotation_set_item_off == 0 {
-            return Ok(None);
+            return Ok(Default::default());
         }
         if !self.is_offset_in_data_section(annotation_set_item_off) {
             return Err(Error::BadOffset(
@@ -634,10 +634,8 @@ where
                 "AnnotationSetItem offset not in data section".to_string(),
             ));
         }
-        Ok(Some(
-            self.source
-                .pread_with(annotation_set_item_off as usize, self)?,
-        ))
+        self.source
+            .pread_with(annotation_set_item_off as usize, self)
     }
 
     pub(crate) fn get_annotation_set_ref_list(
@@ -672,10 +670,10 @@ where
     pub(crate) fn get_annotations_directory_item(
         &self,
         annotations_directory_item_off: uint,
-    ) -> Result<Option<AnnotationsDirectoryItem>> {
+    ) -> Result<AnnotationsDirectoryItem> {
         debug!(target: "class", "annotations directory offset: {}", annotations_directory_item_off);
         if annotations_directory_item_off == 0 {
-            return Ok(None);
+            return Ok(Default::default());
         }
         if !self.is_offset_in_data_section(annotations_directory_item_off) {
             return Err(Error::BadOffset(
@@ -683,10 +681,8 @@ where
                 "Annotations directory offset not in data section".to_string(),
             ));
         }
-        Ok(Some(self.source.pread_with(
-            annotations_directory_item_off as usize,
-            self,
-        )?))
+        self.source
+            .pread_with(annotations_directory_item_off as usize, self)
     }
 
     pub(crate) fn get_debug_info_item(&self, debug_info_off: uint) -> Result<DebugInfoItem> {

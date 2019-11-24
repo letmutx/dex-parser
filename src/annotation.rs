@@ -127,7 +127,7 @@ where
 
 /// List of Annotation Sets. Used for method parameter annotations.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#set-ref-list)
-#[derive(Debug, Getters)]
+#[derive(Debug, Default, Getters)]
 #[get = "pub"]
 pub struct AnnotationSetRefList {
     annotation_set_list: Vec<AnnotationSetItem>,
@@ -152,7 +152,6 @@ where
                     .iter()
                     .map(|annotation_set_item_off| {
                         ctx.get_annotation_set_item(*annotation_set_item_off)
-                            .map(|annotation| annotation.expect("ref set list shouldn't be none"))
                     })
                     .collect::<super::Result<_>>()?,
             },
@@ -163,7 +162,7 @@ where
 
 /// A set of annotations on an element.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotation-set-item)
-#[derive(Debug, Getters)]
+#[derive(Debug, Default, Getters)]
 #[get = "pub"]
 pub struct AnnotationSetItem {
     annotations: Vec<AnnotationItem>,
@@ -254,9 +253,7 @@ where
         Ok((
             Self {
                 method_idx: MethodId::from(method_idx),
-                annotations: ctx
-                    .get_annotation_set_item(annotation_set_item_off)?
-                    .expect("Method annotation shouldn't be none"),
+                annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,
         ))
@@ -288,9 +285,7 @@ where
         Ok((
             Self {
                 field_idx: FieldId::from(field_idx),
-                annotations: ctx
-                    .get_annotation_set_item(annotation_set_item_off)?
-                    .expect("Annotation offset must not 0"),
+                annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,
         ))
@@ -299,13 +294,12 @@ where
 
 /// Annotations of the fields, methods and parameters of a class and the class itself.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotations-directory)
-#[derive(Debug, Getters)]
-#[get = "pub"]
+#[derive(Debug, Default, Getters)]
 pub struct AnnotationsDirectoryItem {
-    class_annotations: Option<AnnotationSetItem>,
-    field_annotations: Option<Vec<FieldAnnotation>>,
-    method_annotations: Option<Vec<MethodAnnotation>>,
-    parameter_annotations: Option<Vec<ParameterAnnotation>>,
+    pub(crate) class_annotations: AnnotationSetItem,
+    pub(crate) field_annotations: Vec<FieldAnnotations>,
+    pub(crate) method_annotations: Vec<MethodAnnotations>,
+    pub(crate) parameter_annotations: Vec<ParameterAnnotations>,
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationsDirectoryItem
@@ -325,31 +319,10 @@ where
         debug!(target: "annotations directory", "fields size: {}, annotated method size: {}, annotated params size: {}",
             fields_size, annotated_method_size, annotated_parameters_size);
         let class_annotations = ctx.get_annotation_set_item(class_annotations_off)?;
-        let field_annotations = if fields_size != 0 {
-            Some(try_gread_vec_with!(source, offset, fields_size, ctx))
-        } else {
-            None
-        };
-        let method_annotations = if annotated_method_size != 0 {
-            Some(try_gread_vec_with!(
-                source,
-                offset,
-                annotated_method_size,
-                ctx
-            ))
-        } else {
-            None
-        };
-        let parameter_annotations = if annotated_parameters_size != 0 {
-            Some(try_gread_vec_with!(
-                source,
-                offset,
-                annotated_parameters_size,
-                ctx
-            ))
-        } else {
-            None
-        };
+        let field_annotations = try_gread_vec_with!(source, offset, fields_size, ctx);
+        let method_annotations = try_gread_vec_with!(source, offset, annotated_method_size, ctx);
+        let parameter_annotations =
+            try_gread_vec_with!(source, offset, annotated_parameters_size, ctx);
         Ok((
             Self {
                 class_annotations,

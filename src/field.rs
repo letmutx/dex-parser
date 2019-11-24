@@ -1,6 +1,7 @@
 //! Dex `Field` and supporting structures
 use scroll::{ctx, Pread, Uleb128};
 
+use crate::annotation::AnnotationSetItem;
 use crate::class::ClassId;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
@@ -50,6 +51,9 @@ pub struct Field {
     /// at runtime. The field might be initialized in `<clinit>` method.
     #[get = "pub"]
     initial_value: Option<EncodedValue>,
+    /// Annotations of the field.
+    #[get = "pub"]
+    annotations: AnnotationSetItem,
 }
 
 impl Field {
@@ -57,6 +61,7 @@ impl Field {
         dex: &super::Dex<S>,
         encoded_field: &EncodedField,
         initial_value: Option<EncodedValue>,
+        annotations: AnnotationSetItem,
     ) -> super::Result<Self> {
         debug!(target: "field", "encoded field: {:?}", encoded_field);
         let field_item = dex.get_field_item(encoded_field.field_id)?;
@@ -72,6 +77,7 @@ impl Field {
                 ))
             })?,
             initial_value,
+            annotations,
         })
     }
 }

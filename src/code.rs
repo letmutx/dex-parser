@@ -1,16 +1,12 @@
-use scroll::ctx;
-use scroll::{Pread, Uleb128};
+use scroll::{ctx, Pread, Uleb128};
 use std::fmt;
 
 use getset::{CopyGetters, Getters};
 
-use crate::encoded_item::EncodedCatchHandlers;
-use crate::error::Error;
-use crate::jtype::Type;
-use crate::string::DexString;
-use crate::uint;
-use crate::ulong;
-use crate::ushort;
+use crate::{
+    encoded_item::EncodedCatchHandlers, error::Error, jtype::Type, string::DexString, uint, ulong,
+    ushort,
+};
 
 /// Debug Info of a method.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item)

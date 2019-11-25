@@ -1,8 +1,6 @@
 use crate::Result;
-use scroll::ctx;
-use scroll::Pread;
-use std::cmp::Ordering;
-use std::fmt::Debug;
+use scroll::{ctx, Pread};
+use std::{cmp::Ordering, fmt::Debug};
 
 pub(crate) struct Section<'a> {
     inner: &'a [u8],

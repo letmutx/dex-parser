@@ -1,7 +1,4 @@
-use std::cell::RefCell;
-use std::cmp::Eq;
-use std::hash::Hash;
-use std::rc::Rc;
+use std::{cell::RefCell, cmp::Eq, hash::Hash, rc::Rc};
 
 use lru::LruCache;
 

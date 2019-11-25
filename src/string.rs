@@ -1,18 +1,14 @@
 //! Dex String utilities
-use std::convert::AsRef;
-use std::fmt;
-use std::ops::Deref;
-use std::ops::Range;
+use std::{
+    convert::AsRef,
+    fmt,
+    ops::{Deref, Range},
+};
 
 use cesu8::{from_java_cesu8, to_java_cesu8};
 use scroll::{self, ctx, Pread, Uleb128};
 
-use crate::cache::Cache;
-use crate::error;
-use crate::error::Error;
-use crate::source::Source;
-use crate::uint;
-use crate::Result;
+use crate::{cache::Cache, error, error::Error, source::Source, uint, Result};
 use std::rc::Rc;
 
 /// Index into the `StringId`s section.

@@ -2,20 +2,19 @@
 use std::clone::Clone;
 
 use getset::{CopyGetters, Getters};
-use scroll::ctx;
-use scroll::{Pread, Uleb128};
+use scroll::{ctx, Pread, Uleb128};
 
-use crate::annotation::{AnnotationSetItem, AnnotationsDirectoryItem};
-use crate::encoded_item::EncodedItemArrayCtx;
-use crate::error::Error;
-use crate::field::EncodedFieldArray;
-use crate::field::Field;
-use crate::jtype::Type;
-use crate::method::EncodedMethodArray;
-use crate::method::Method;
-use crate::source::Source;
-use crate::string::DexString;
-use crate::uint;
+use crate::{
+    annotation::{AnnotationSetItem, AnnotationsDirectoryItem},
+    encoded_item::EncodedItemArrayCtx,
+    error::Error,
+    field::{EncodedFieldArray, Field},
+    jtype::Type,
+    method::{EncodedMethodArray, Method},
+    source::Source,
+    string::DexString,
+    uint,
+};
 
 /// `ClassId` is an index into the Types section. The corresponding `Type` denotes the type of
 /// this class. The `Type` must be a class type, not a primitive or an array.

@@ -1,18 +1,13 @@
 //! Structures for Annotations on a `Class`, `Method`, `MethodParams` and `Field`s.
-use scroll::ctx;
-use scroll::Pread;
-use scroll::Uleb128;
+use scroll::{ctx, Pread, Uleb128};
 use std::ops::Deref;
 
 use getset::{CopyGetters, Getters};
 
-use crate::encoded_value::EncodedValue;
-use crate::error::Error;
-use crate::field::FieldId;
-use crate::jtype::TypeId;
-use crate::method::MethodId;
-use crate::string::StringId;
-use crate::{ubyte, uint};
+use crate::{
+    encoded_value::EncodedValue, error::Error, field::FieldId, jtype::TypeId, method::MethodId,
+    string::StringId, ubyte, uint,
+};
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;

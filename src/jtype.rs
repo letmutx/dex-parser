@@ -1,11 +1,9 @@
 //! Dex `Type` and utilities
-use std::clone::Clone;
-use std::fmt;
+use std::{clone::Clone, fmt};
 
 use getset::{CopyGetters, Getters};
 
-use crate::string::DexString;
-use crate::uint;
+use crate::{string::DexString, uint};
 
 /// Offset into the `TypeId`s section.
 pub type TypeId = uint;

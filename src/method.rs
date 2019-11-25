@@ -2,24 +2,18 @@
 use getset::{CopyGetters, Getters};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use scroll::ctx;
-use scroll::Pread;
-use scroll::Uleb128;
+use scroll::{ctx, Pread, Uleb128};
 
-use crate::annotation::{AnnotationSetItem, AnnotationSetRefList};
-use crate::code::CodeItem;
-use crate::encoded_item::EncodedItem;
-use crate::encoded_item::EncodedItemArray;
-use crate::error::Error;
-use crate::field::FieldId;
-use crate::jtype::Type;
-use crate::jtype::TypeId;
-use crate::string::DexString;
-use crate::string::StringId;
-use crate::uint;
-use crate::ulong;
-use crate::ushort;
-use crate::utils;
+use crate::{
+    annotation::{AnnotationSetItem, AnnotationSetRefList},
+    code::CodeItem,
+    encoded_item::{EncodedItem, EncodedItemArray},
+    error::Error,
+    field::FieldId,
+    jtype::{Type, TypeId},
+    string::{DexString, StringId},
+    uint, ulong, ushort, utils,
+};
 
 bitflags! {
     /// Access flags of a `Dex` Method

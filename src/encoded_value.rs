@@ -1,27 +1,21 @@
 //! Contains structures defining values in a `Dex`.
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use scroll::Pread;
-use scroll::Uleb128;
-use scroll::LE;
-use scroll::{self, ctx};
+use scroll::{self, ctx, Pread, Uleb128, LE};
 
-use crate::annotation::EncodedAnnotation;
-use crate::error::Error;
-use crate::field::FieldIdItem;
-use crate::int;
-use crate::jtype::Type;
-use crate::long;
-use crate::method::MethodHandleItem;
-use crate::method::MethodIdItem;
-use crate::method::ProtoIdItem;
-use crate::short;
-use crate::string::DexString;
-use crate::uint;
-use crate::ulong;
-use crate::ushort;
-use crate::Result;
-use crate::{byte, ubyte};
+use crate::{
+    annotation::EncodedAnnotation,
+    byte,
+    error::Error,
+    field::FieldIdItem,
+    int,
+    jtype::Type,
+    long,
+    method::{MethodHandleItem, MethodIdItem, ProtoIdItem},
+    short,
+    string::DexString,
+    ubyte, uint, ulong, ushort, Result,
+};
 
 /// Used to represent values of fields, annotations etc.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoding)

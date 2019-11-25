@@ -1,18 +1,16 @@
 //! Dex `Field` and supporting structures
 use scroll::{ctx, Pread, Uleb128};
 
-use crate::annotation::AnnotationSetItem;
-use crate::class::ClassId;
-use crate::encoded_item::EncodedItem;
-use crate::encoded_item::EncodedItemArray;
-use crate::encoded_value::EncodedValue;
-use crate::error::Error;
-use crate::jtype::Type;
-use crate::string::DexString;
-use crate::string::StringId;
-use crate::uint;
-use crate::ulong;
-use crate::ushort;
+use crate::{
+    annotation::AnnotationSetItem,
+    class::ClassId,
+    encoded_item::{EncodedItem, EncodedItemArray},
+    encoded_value::EncodedValue,
+    error::Error,
+    jtype::Type,
+    string::{DexString, StringId},
+    uint, ulong, ushort,
+};
 use getset::{CopyGetters, Getters};
 
 bitflags! {

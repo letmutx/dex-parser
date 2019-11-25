@@ -1,7 +1,8 @@
-use crate::encoded_item::EncodedItem;
-use crate::encoded_item::EncodedItemArray;
-use crate::jtype::{Type, TypeId};
-use crate::ushort;
+use crate::{
+    encoded_item::{EncodedItem, EncodedItemArray},
+    jtype::{Type, TypeId},
+    ushort,
+};
 
 macro_rules! try_gread_vec_with {
     ($source:ident,$offset:ident,$cap:expr,$ctx:expr) => {{

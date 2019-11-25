@@ -107,7 +107,7 @@ impl Method {
         let method_item = dex.get_method_item(encoded_method.method_id)?;
         let name = dex.get_string(method_item.name_idx)?;
         debug!(target: "method", "name: {}, method id item: {:?}", name, method_item);
-        let proto_item = dex.get_proto_item(ulong::from(method_item.proto_idx))?;
+        let proto_item = dex.get_proto_item(ProtoId::from(method_item.proto_idx))?;
         debug!(target: "method", "method proto_item: {:?}", proto_item);
         let shorty = dex.get_string(proto_item.shorty)?;
         let return_type = dex.get_type(proto_item.return_type)?;
@@ -133,7 +133,7 @@ impl Method {
         let code = dex.get_code_item(encoded_method.code_offset)?;
         Ok(Self {
             name,
-            class: dex.get_type(uint::from(method_item.class_idx))?,
+            class: dex.get_type(TypeId::from(method_item.class_idx))?,
             access_flags: AccessFlags::from_bits(encoded_method.access_flags).ok_or_else(|| {
                 Error::InvalidId(format!(
                     "Invalid access flags for method {}",

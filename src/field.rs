@@ -7,9 +7,9 @@ use crate::{
     encoded_item::{EncodedItem, EncodedItemArray},
     encoded_value::EncodedValue,
     error::Error,
-    jtype::Type,
+    jtype::{Type, TypeId},
     string::{DexString, StringId},
-    uint, ulong, ushort,
+    ulong, ushort,
 };
 use getset::{CopyGetters, Getters};
 
@@ -66,8 +66,8 @@ impl Field {
         debug!(target: "field", "field id item: {:?}", field_item);
         Ok(Self {
             name: dex.get_string(field_item.name_idx)?,
-            jtype: dex.get_type(uint::from(field_item.type_idx))?,
-            class: uint::from(field_item.class_idx),
+            jtype: dex.get_type(TypeId::from(field_item.type_idx))?,
+            class: ClassId::from(field_item.class_idx),
             access_flags: AccessFlags::from_bits(encoded_field.access_flags).ok_or_else(|| {
                 Error::InvalidId(format!(
                     "Invalid access flags when loading field {}",

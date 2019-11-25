@@ -7,14 +7,14 @@ use crate::{
     annotation::EncodedAnnotation,
     byte,
     error::Error,
-    field::FieldIdItem,
+    field::{FieldId, FieldIdItem},
     int,
-    jtype::Type,
+    jtype::{Type, TypeId},
     long,
-    method::{MethodHandleItem, MethodIdItem, ProtoIdItem},
+    method::{MethodHandleItem, MethodId, MethodIdItem, ProtoId, ProtoIdItem},
     short,
-    string::DexString,
-    ubyte, uint, ulong, ushort, Result,
+    string::{DexString, StringId},
+    ubyte, uint, ushort, Result,
 };
 
 /// Used to represent values of fields, annotations etc.
@@ -155,7 +155,7 @@ where
             ValueType::MethodType => {
                 debug_assert!(value_arg < 4);
                 let proto_id: uint = try_extended_gread!(source, offset, value_arg, 4);
-                EncodedValue::MethodType(dex.get_proto_item(u64::from(proto_id))?)
+                EncodedValue::MethodType(dex.get_proto_item(ProtoId::from(proto_id))?)
             }
             ValueType::MethodHandle => {
                 debug_assert!(value_arg < 4);
@@ -164,28 +164,28 @@ where
             }
             ValueType::String => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
-                EncodedValue::String(dex.get_string(index)?)
+                let string_id: StringId = try_extended_gread!(source, offset, value_arg, 4);
+                EncodedValue::String(dex.get_string(string_id)?)
             }
             ValueType::Type => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
-                EncodedValue::Type(dex.get_type(index)?)
+                let type_id: TypeId = try_extended_gread!(source, offset, value_arg, 4);
+                EncodedValue::Type(dex.get_type(type_id)?)
             }
             ValueType::Field => {
                 debug_assert!(value_arg < 4);
                 let index: uint = try_extended_gread!(source, offset, value_arg, 4);
-                EncodedValue::Field(dex.get_field_item(ulong::from(index))?)
+                EncodedValue::Field(dex.get_field_item(FieldId::from(index))?)
             }
             ValueType::Method => {
                 debug_assert!(value_arg < 4);
                 let index: uint = try_extended_gread!(source, offset, value_arg, 4);
-                EncodedValue::Method(dex.get_method_item(ulong::from(index))?)
+                EncodedValue::Method(dex.get_method_item(MethodId::from(index))?)
             }
             ValueType::Enum => {
                 debug_assert!(value_arg < 4);
                 let index: uint = try_extended_gread!(source, offset, value_arg, 4);
-                EncodedValue::Enum(dex.get_field_item(ulong::from(index))?)
+                EncodedValue::Enum(dex.get_field_item(FieldId::from(index))?)
             }
             ValueType::Array => {
                 debug_assert!(value_arg == 0);

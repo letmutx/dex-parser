@@ -13,7 +13,7 @@ use crate::ulong;
 use crate::ushort;
 
 /// Debug Info of a method.
-/// https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item
+/// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct DebugInfoItem {
     #[get_copy = "pub"]

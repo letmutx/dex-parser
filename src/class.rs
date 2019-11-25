@@ -5,7 +5,7 @@ use getset::{CopyGetters, Getters};
 use scroll::ctx;
 use scroll::{Pread, Uleb128};
 
-use crate::annotation::AnnotationsDirectoryItem;
+use crate::annotation::{AnnotationSetItem, AnnotationsDirectoryItem};
 use crate::encoded_item::EncodedItemArrayCtx;
 use crate::error::Error;
 use crate::field::EncodedFieldArray;
@@ -57,9 +57,6 @@ pub struct Class {
     /// List of the interfaces implemented by this class.
     #[get = "pub"]
     pub(crate) interfaces: Vec<Type>,
-    /// Annotations of the class, fields, methods and their parameters.
-    #[get = "pub"]
-    pub(crate) annotations: Option<AnnotationsDirectoryItem>,
     /// The file in which this class is found in the source code.
     #[get = "pub"]
     pub(crate) source_file: Option<DexString>,
@@ -71,6 +68,9 @@ pub struct Class {
     pub(crate) direct_methods: Vec<Method>,
     /// List of parent class methods overriden by this class.
     pub(crate) virtual_methods: Vec<Method>,
+    /// Annotations of the class.
+    #[get = "pub"]
+    pub(crate) annotations: AnnotationSetItem,
 }
 
 impl Class {
@@ -115,6 +115,12 @@ impl Class {
 
         let data_off = class_def.class_data_off;
 
+        let AnnotationsDirectoryItem {
+            class_annotations,
+            mut field_annotations,
+            mut method_annotations,
+            mut parameter_annotations,
+        } = dex.get_annotations_directory_item(class_def.annotations_off)?;
         let static_values = dex.get_static_values(class_def.static_values_off)?;
         let (static_fields, instance_fields, direct_methods, virtual_methods) = dex
             .get_class_data(data_off)?
@@ -124,21 +130,53 @@ impl Class {
                 // reversing the values so that the pop below returns values in
                 // correct order.
                 static_values.reverse();
-                let em = |encoded_method| dex.get_method(&encoded_method);
                 Ok((
                     try_from_item!(c.static_fields, |encoded_field| {
-                        dex.get_field(&encoded_field, static_values.pop())
+                        dex.get_field(
+                            &encoded_field,
+                            static_values.pop(),
+                            field_annotations
+                                .binary_search_by_key(&encoded_field.field_id(), |f| f.field_idx())
+                                .map(|index| field_annotations.remove(index).annotations)
+                                .unwrap_or_else(|_| Default::default()),
+                        )
                     }),
                     try_from_item!(c.instance_fields, |encoded_field| {
-                        dex.get_field(&encoded_field, None)
+                        dex.get_field(
+                            &encoded_field,
+                            None,
+                            field_annotations
+                                .binary_search_by_key(&encoded_field.field_id(), |f| f.field_idx())
+                                .map(|index| field_annotations.remove(index).annotations)
+                                .unwrap_or_else(|_| Default::default()),
+                        )
                     }),
-                    try_from_item!(c.direct_methods, em),
-                    try_from_item!(c.virtual_methods, em),
+                    try_from_item!(c.direct_methods, |encoded_method| {
+                        let method_annotations = method_annotations
+                            .binary_search_by_key(&encoded_method.method_id(), |m| m.method_idx())
+                            .map(|index| method_annotations.remove(index).annotations)
+                            .unwrap_or_else(|_| Default::default());
+                        let parameter_annotations = parameter_annotations
+                            .binary_search_by_key(&encoded_method.method_id(), |m| m.method_idx())
+                            .map(|index| parameter_annotations.remove(index).annotations)
+                            .unwrap_or_else(|_| Default::default());
+                        dex.get_method(&encoded_method, method_annotations, parameter_annotations)
+                    }),
+                    try_from_item!(c.virtual_methods, |encoded_method| {
+                        let method_annotations = method_annotations
+                            .binary_search_by_key(&encoded_method.method_id(), |m| m.method_idx())
+                            .map(|index| method_annotations.remove(index).annotations)
+                            .unwrap_or_else(|_| Default::default());
+                        let parameter_annotations = parameter_annotations
+                            .binary_search_by_key(&encoded_method.method_id(), |m| m.method_idx())
+                            .map(|index| parameter_annotations.remove(index).annotations)
+                            .unwrap_or_else(|_| Default::default());
+                        dex.get_method(&encoded_method, method_annotations, parameter_annotations)
+                    }),
                 ))
             })
             .unwrap_or_else(|| Ok::<_, Error>(Default::default()))?;
 
-        let annotations = dex.get_annotations_directory_item(class_def.annotations_off)?;
         debug!(target: "class", "super class id: {}", class_def.superclass_idx);
         let super_class = if class_def.superclass_idx == super::NO_INDEX {
             Some(class_def.superclass_idx)
@@ -159,11 +197,11 @@ impl Class {
                 ))
             })?,
             source_file: dex.get_source_file(class_def.source_file_idx)?,
-            annotations,
             static_fields,
             instance_fields,
             direct_methods,
             virtual_methods,
+            annotations: class_annotations,
         })
     }
 }

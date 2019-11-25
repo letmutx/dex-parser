@@ -2,6 +2,7 @@
 use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
+use std::ops::Deref;
 
 use getset::{CopyGetters, Getters};
 
@@ -26,6 +27,14 @@ pub struct EncodedAnnotation {
     /// Elements of the annotation
     #[get = "pub"]
     elements: Vec<AnnotationElement>,
+}
+
+impl Deref for EncodedAnnotation {
+    type Target = Vec<AnnotationElement>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.elements
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for EncodedAnnotation
@@ -79,7 +88,7 @@ where
 
 /// Visibility of an annotation.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#visibility)
-#[derive(Debug, FromPrimitive, Copy, Clone)]
+#[derive(Debug, FromPrimitive, Copy, Clone, PartialEq)]
 pub enum Visibility {
     /// Visible only to the Build system.
     Build = 0x0,
@@ -99,6 +108,14 @@ pub struct AnnotationItem {
     /// Type and parameters of this annotation.
     #[get = "pub"]
     annotation: EncodedAnnotation,
+}
+
+impl Deref for AnnotationItem {
+    type Target = EncodedAnnotation;
+
+    fn deref(&self) -> &Self::Target {
+        &self.annotation
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationItem
@@ -127,10 +144,18 @@ where
 
 /// List of Annotation Sets. Used for method parameter annotations.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#set-ref-list)
-#[derive(Debug, Getters)]
+#[derive(Debug, Default, Getters)]
 #[get = "pub"]
 pub struct AnnotationSetRefList {
     annotation_set_list: Vec<AnnotationSetItem>,
+}
+
+impl Deref for AnnotationSetRefList {
+    type Target = Vec<AnnotationSetItem>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.annotation_set_list
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationSetRefList
@@ -152,7 +177,6 @@ where
                     .iter()
                     .map(|annotation_set_item_off| {
                         ctx.get_annotation_set_item(*annotation_set_item_off)
-                            .map(|annotation| annotation.expect("ref set list shouldn't be none"))
                     })
                     .collect::<super::Result<_>>()?,
             },
@@ -163,10 +187,18 @@ where
 
 /// A set of annotations on an element.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotation-set-item)
-#[derive(Debug, Getters)]
+#[derive(Debug, Default, Getters)]
 #[get = "pub"]
 pub struct AnnotationSetItem {
     annotations: Vec<AnnotationItem>,
+}
+
+impl Deref for AnnotationSetItem {
+    type Target = Vec<AnnotationItem>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.annotations
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationSetItem
@@ -197,16 +229,15 @@ where
 /// Annotations of a `Method`'s parameters.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#parameter-annotation)
 #[derive(Debug, Getters, CopyGetters)]
-pub struct ParameterAnnotation {
+pub struct ParameterAnnotations {
     /// The method this parameter belongs to.
     #[get_copy = "pub"]
     method_idx: MethodId,
     /// The list of annotation sets for the parameters.
-    #[get = "pub"]
-    annotations: AnnotationSetRefList,
+    pub(crate) annotations: AnnotationSetRefList,
 }
 
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ParameterAnnotation
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ParameterAnnotations
 where
     S: AsRef<[u8]>,
 {
@@ -232,14 +263,13 @@ where
 /// Annotations of a `Method`.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-annotation)
 #[derive(Debug, Getters, CopyGetters)]
-pub struct MethodAnnotation {
+pub struct MethodAnnotations {
     #[get_copy = "pub"]
     method_idx: MethodId,
-    #[get = "pub"]
-    annotations: AnnotationSetItem,
+    pub(crate) annotations: AnnotationSetItem,
 }
 
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for MethodAnnotation
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for MethodAnnotations
 where
     S: AsRef<[u8]>,
 {
@@ -254,9 +284,7 @@ where
         Ok((
             Self {
                 method_idx: MethodId::from(method_idx),
-                annotations: ctx
-                    .get_annotation_set_item(annotation_set_item_off)?
-                    .expect("Method annotation shouldn't be none"),
+                annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,
         ))
@@ -266,14 +294,14 @@ where
 /// Annotations of a `Field`.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-annotation)
 #[derive(Debug, Getters, CopyGetters)]
-pub struct FieldAnnotation {
+pub struct FieldAnnotations {
     #[get_copy = "pub"]
     field_idx: FieldId,
     #[get = "pub"]
-    annotations: AnnotationSetItem,
+    pub(crate) annotations: AnnotationSetItem,
 }
 
-impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for FieldAnnotation
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for FieldAnnotations
 where
     S: AsRef<[u8]>,
 {
@@ -288,9 +316,7 @@ where
         Ok((
             Self {
                 field_idx: FieldId::from(field_idx),
-                annotations: ctx
-                    .get_annotation_set_item(annotation_set_item_off)?
-                    .expect("Annotation offset must not 0"),
+                annotations: ctx.get_annotation_set_item(annotation_set_item_off)?,
             },
             *offset,
         ))
@@ -299,13 +325,12 @@ where
 
 /// Annotations of the fields, methods and parameters of a class and the class itself.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotations-directory)
-#[derive(Debug, Getters)]
-#[get = "pub"]
+#[derive(Debug, Default, Getters)]
 pub struct AnnotationsDirectoryItem {
-    class_annotations: Option<AnnotationSetItem>,
-    field_annotations: Option<Vec<FieldAnnotation>>,
-    method_annotations: Option<Vec<MethodAnnotation>>,
-    parameter_annotations: Option<Vec<ParameterAnnotation>>,
+    pub(crate) class_annotations: AnnotationSetItem,
+    pub(crate) field_annotations: Vec<FieldAnnotations>,
+    pub(crate) method_annotations: Vec<MethodAnnotations>,
+    pub(crate) parameter_annotations: Vec<ParameterAnnotations>,
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for AnnotationsDirectoryItem
@@ -325,31 +350,10 @@ where
         debug!(target: "annotations directory", "fields size: {}, annotated method size: {}, annotated params size: {}",
             fields_size, annotated_method_size, annotated_parameters_size);
         let class_annotations = ctx.get_annotation_set_item(class_annotations_off)?;
-        let field_annotations = if fields_size != 0 {
-            Some(try_gread_vec_with!(source, offset, fields_size, ctx))
-        } else {
-            None
-        };
-        let method_annotations = if annotated_method_size != 0 {
-            Some(try_gread_vec_with!(
-                source,
-                offset,
-                annotated_method_size,
-                ctx
-            ))
-        } else {
-            None
-        };
-        let parameter_annotations = if annotated_parameters_size != 0 {
-            Some(try_gread_vec_with!(
-                source,
-                offset,
-                annotated_parameters_size,
-                ctx
-            ))
-        } else {
-            None
-        };
+        let field_annotations = try_gread_vec_with!(source, offset, fields_size, ctx);
+        let method_annotations = try_gread_vec_with!(source, offset, annotated_method_size, ctx);
+        let parameter_annotations =
+            try_gread_vec_with!(source, offset, annotated_parameters_size, ctx);
         Ok((
             Self {
                 class_annotations,

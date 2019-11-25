@@ -6,6 +6,7 @@ use scroll::ctx;
 use scroll::Pread;
 use scroll::Uleb128;
 
+use crate::annotation::{AnnotationSetItem, AnnotationSetRefList};
 use crate::code::CodeItem;
 use crate::encoded_item::EncodedItem;
 use crate::encoded_item::EncodedItemArray;
@@ -65,6 +66,12 @@ pub struct Method {
     /// Code and DebugInfo of the method.
     #[get = "pub"]
     code: Option<CodeItem>,
+    /// Annotations of the method.
+    #[get = "pub"]
+    annotations: AnnotationSetItem,
+    /// Annotations of the params.
+    #[get = "pub"]
+    param_annotations: AnnotationSetRefList,
 }
 
 /// Index into the `ProtoId`s list.
@@ -98,6 +105,8 @@ impl Method {
     pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         encoded_method: &EncodedMethod,
+        annotations: AnnotationSetItem,
+        param_annotations: AnnotationSetRefList,
     ) -> super::Result<Method> {
         debug!(target: "method", "encoded method: {:?}", encoded_method);
         let source = &dex.source;
@@ -141,6 +150,8 @@ impl Method {
             return_type,
             params,
             code,
+            annotations,
+            param_annotations,
         })
     }
 }

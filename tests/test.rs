@@ -1,8 +1,8 @@
+use std::env;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
-use std::env;
 
 use tempfile::TempDir;
 
@@ -183,7 +183,160 @@ test!(
     }
 );
 
-// TODO: add tests for interface fields, initial values, annotations on fields
+test!(
+    test_annotations,
+    {
+        "Annotation.java" => r#"
+            public @interface Annotation {
+                public String name();
+                public int value();
+            }
+        "#
+    };
+    {
+        "RuntimeAnnotation.java" => r#"
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            @Retention(RetentionPolicy.RUNTIME)
+            @interface RuntimeAnnotation {}
+        "#
+    };
+    {
+        "Main.java" => r#"
+            @RuntimeAnnotation
+            public class Main<T> {
+                @RuntimeAnnotation @Annotation(name = "name", value = 5) private T field;
+                @RuntimeAnnotation public void myMethod(@RuntimeAnnotation final int param1, T param2) {}
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        use dex::class::AccessFlags;
+        use dex::annotation::Visibility;
+        use dex::encoded_value::EncodedValue;
+
+        let annotation_class = dex.find_class_by_name("LAnnotation;");
+        assert!(annotation_class.is_ok());
+        let annotation_class = annotation_class.unwrap();
+        assert!(annotation_class.is_some());
+        let annotation_class = annotation_class.unwrap();
+        assert_has_access_flags!(annotation_class, [PUBLIC, ANNOTATION]);
+        assert_eq!(annotation_class.methods().count(), 2);
+
+        let runtime_annotation_class = dex.find_class_by_name("LRuntimeAnnotation;");
+        assert!(runtime_annotation_class.is_ok());
+        let runtime_annotation_class = runtime_annotation_class.unwrap();
+        assert!(runtime_annotation_class.is_some());
+        let runtime_annotation_class = runtime_annotation_class.unwrap();
+        assert_has_access_flags!(runtime_annotation_class, [ANNOTATION]);
+
+
+        let class = dex.find_class_by_name("LMain;");
+        assert!(class.is_ok());
+        let class = class.unwrap();
+        assert!(class.is_some());
+        let class = class.unwrap();
+        let field = class.fields().find(|f| f.name() == "field");
+        assert!(field.is_some());
+        let field = field.unwrap();
+
+        let annotation_item = field.annotations().iter().find(|item| item.type_idx() == annotation_class.jtype().id());
+        assert!(annotation_item.is_some());
+        let annotation_item = annotation_item.unwrap();
+        assert_eq!(annotation_item.visibility(), Visibility::Build);
+        let find_element = |element_name| {
+            annotation_item.annotation().elements().iter().find_map(|e| {
+                let string = dex.get_string(e.name_idx());
+                assert!(string.is_ok());
+                let string = string.unwrap();
+                if string == element_name { Some(e) } else { None }
+            })
+        };
+        let name = find_element("name");
+        assert!(name.is_some());
+        assert_eq!(*name.unwrap().value(), EncodedValue::String("name".to_string().into()));
+
+        let value = find_element("value");
+        assert!(value.is_some());
+        assert_eq!(*value.unwrap().value(), EncodedValue::Int(5));
+
+
+        let dalvik_signature_annotation = dex.get_type_from_descriptor("Ldalvik/annotation/Signature;");
+        assert!(dalvik_signature_annotation.is_ok());
+        let dalvik_signature_annotation = dalvik_signature_annotation.unwrap();
+        assert!(dalvik_signature_annotation.is_some());
+        let dalvik_signature_annotation = dalvik_signature_annotation.unwrap();
+
+        let annotation_item = field.annotations().iter().find(|item| item.type_idx() == dalvik_signature_annotation.id());
+        assert!(annotation_item.is_some());
+        let annotation_item = annotation_item.unwrap();
+        assert_eq!(annotation_item.visibility(), Visibility::System);
+
+        let find_element = |element_name| {
+            annotation_item.annotation().elements().iter().find_map(|e| {
+                let string = dex.get_string(e.name_idx());
+                assert!(string.is_ok());
+                let string = string.unwrap();
+                if string == element_name { Some(e) } else { None }
+            })
+        };
+
+        let test_signature = |value: &EncodedValue, expected| {
+            match *value {
+                EncodedValue::Array(ref v) => {
+                    let signature: String = v.iter().map(|s|
+                        if let EncodedValue::String(ref s) = s {
+                            s.to_string()
+                        } else {
+                            assert!(false, "expected string in signature");
+                            unreachable!()
+                        }
+                    ).collect();
+                    assert_eq!(signature, expected);
+                },
+                _ => assert!(false, "expected array in signature")
+            }
+        };
+
+        let value = find_element("value");
+        assert!(value.is_some());
+        let value = value.unwrap();
+        test_signature(value.value(), "TT;");
+
+
+        let method = class.methods().find(|n| n.name() == "myMethod");
+        assert!(method.is_some());
+        let method = method.unwrap();
+
+        let annotation_item = method.annotations().iter().find(|item| item.type_idx() == dalvik_signature_annotation.id());
+        assert!(annotation_item.is_some());
+        let annotation_item = annotation_item.unwrap();
+
+        let find_element = |element_name| {
+            annotation_item.annotation().elements().iter().find_map(|e| {
+                let string = dex.get_string(e.name_idx());
+                assert!(string.is_ok());
+                let string = string.unwrap();
+                if string == element_name { Some(e) } else { None }
+            })
+        };
+
+        let value = find_element("value");
+        assert!(value.is_some());
+        let value = value.unwrap();
+        test_signature(value.value(), "(ITT;)V");
+
+        let annotation_set_ref_list: Vec<_> = method.param_annotations().iter().collect();
+        assert_eq!(annotation_set_ref_list.len(), 2);
+        let first = &annotation_set_ref_list[0].annotations()[0];
+        assert_eq!(first.type_idx(), runtime_annotation_class.jtype().id());
+        assert!(&annotation_set_ref_list[1].annotations().is_empty());
+
+        let class_annotation = class.annotations().iter().find(|item| item.type_idx() == runtime_annotation_class.jtype().id());
+        assert!(class_annotation.is_some());
+    }
+);
+
 test!(
     test_fields,
     {
@@ -475,7 +628,6 @@ test!(
     }
 );
 
-// TODO: test method annotations
 test!(
     test_methods,
     {

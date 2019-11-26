@@ -13,8 +13,10 @@ use crate::{
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct DebugInfoItem {
+    /// Initial value for the state machines's line register.
     #[get_copy = "pub"]
     line_start: usize,
+    /// Names of the incoming parameters.
     #[get = "pub"]
     parameter_names: Vec<Option<DexString>>,
 }

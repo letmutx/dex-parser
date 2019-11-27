@@ -1,17 +1,13 @@
-use scroll::ctx;
-use scroll::Pread;
-use scroll::Sleb128;
-use scroll::Uleb128;
+use scroll::{ctx, Pread, Sleb128, Uleb128};
 
 use getset::Getters;
 
-use crate::code::CatchHandler;
-use crate::code::ExceptionType;
-use crate::error::Error;
-use crate::jtype::TypeId;
-use crate::uint;
-use crate::ulong;
-use crate::ushort;
+use crate::{
+    code::{CatchHandler, ExceptionType},
+    error::Error,
+    jtype::TypeId,
+    uint, ulong, ushort,
+};
 
 pub trait EncodedItem {
     /// Returns the id of the encoded item.

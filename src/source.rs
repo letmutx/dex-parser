@@ -1,7 +1,4 @@
-use std::clone::Clone;
-use std::convert::AsRef;
-use std::ops::Index;
-use std::rc::Rc;
+use std::{clone::Clone, convert::AsRef, ops::Index, rc::Rc};
 
 use crate::ubyte;
 

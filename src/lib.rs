@@ -16,8 +16,7 @@ use scroll;
 
 pub use error::Error;
 
-pub use crate::dex::Dex;
-pub use crate::dex::DexReader;
+pub use crate::dex::{Dex, DexReader};
 
 #[macro_use]
 mod utils;

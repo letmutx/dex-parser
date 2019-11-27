@@ -1,6 +1,8 @@
-use std::error;
-use std::fmt::{self, Display};
-use std::io;
+use std::{
+    error,
+    fmt::{self, Display},
+    io,
+};
 
 use scroll;
 

@@ -1,53 +1,31 @@
-use std::fs::File;
-use std::io::BufReader;
-use std::ops::Range;
+use std::{fs::File, io::BufReader, ops::Range};
 
 use adler32;
 use getset::{CopyGetters, Getters};
-use memmap::Mmap;
-use memmap::MmapOptions;
+use memmap::{Mmap, MmapOptions};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use scroll::ctx;
-use scroll::Pread;
+use scroll::{ctx, Pread};
 
 use super::Result;
-use crate::annotation::{
-    AnnotationItem, AnnotationSetItem, AnnotationSetRefList, AnnotationsDirectoryItem,
+use crate::{
+    annotation::{
+        AnnotationItem, AnnotationSetItem, AnnotationSetRefList, AnnotationsDirectoryItem,
+    },
+    class::{Class, ClassDataItem, ClassDefItem, ClassDefItemIter},
+    code::{CodeItem, DebugInfoItem},
+    encoded_value::{EncodedArray, EncodedValue},
+    error::{self, Error},
+    field::{EncodedField, Field, FieldId, FieldIdItem},
+    jtype::{Type, TypeId},
+    method::{
+        EncodedMethod, Method, MethodHandleItem, MethodId, MethodIdItem, ProtoId, ProtoIdItem,
+    },
+    search::Section,
+    source::Source,
+    string::{DexString, StringId, Strings, StringsIter},
+    ubyte, uint, ulong, ushort, utils, Endian, ENDIAN_CONSTANT, NO_INDEX, REVERSE_ENDIAN_CONSTANT,
 };
-use crate::class::Class;
-use crate::class::ClassDataItem;
-use crate::class::ClassDefItem;
-use crate::class::ClassDefItemIter;
-use crate::code::{CodeItem, DebugInfoItem};
-use crate::encoded_value::{EncodedArray, EncodedValue};
-use crate::error::{self, Error};
-use crate::field::EncodedField;
-use crate::field::Field;
-use crate::field::FieldId;
-use crate::field::FieldIdItem;
-use crate::jtype::Type;
-use crate::jtype::TypeId;
-use crate::method::EncodedMethod;
-use crate::method::Method;
-use crate::method::MethodHandleItem;
-use crate::method::MethodId;
-use crate::method::MethodIdItem;
-use crate::method::ProtoId;
-use crate::method::ProtoIdItem;
-use crate::search::Section;
-use crate::source::Source;
-use crate::string::DexString;
-use crate::string::StringId;
-use crate::string::Strings;
-use crate::string::StringsIter;
-use crate::ubyte;
-use crate::uint;
-use crate::ulong;
-use crate::ushort;
-use crate::utils;
-use crate::Endian;
-use crate::{ENDIAN_CONSTANT, NO_INDEX, REVERSE_ENDIAN_CONSTANT};
 use std::path::Path;
 
 /// Dex file header

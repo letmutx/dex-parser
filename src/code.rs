@@ -1,5 +1,6 @@
+//! Structures defining the contents of a `Method`'s code.
 use scroll::{ctx, Pread, Uleb128};
-use std::fmt;
+use std::{fmt, ops::Deref};
 
 use getset::{CopyGetters, Getters};
 
@@ -12,8 +13,10 @@ use crate::{
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item)
 #[derive(Debug, Getters, CopyGetters)]
 pub struct DebugInfoItem {
+    /// Initial value for the state machines's line register.
     #[get_copy = "pub"]
     line_start: usize,
+    /// Names of the incoming parameters.
     #[get = "pub"]
     parameter_names: Vec<Option<DexString>>,
 }
@@ -38,13 +41,13 @@ pub struct CodeItem {
     insns: Vec<ushort>,
     /// Try, Exception handling information of this method.
     #[get = "pub"]
-    tries: Option<Tries>,
+    tries: Tries,
 }
 
 impl fmt::Debug for CodeItem {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "CodeItem {{ registers_size: {}, debug_info: {}, ins_size: {}, outs_size: {}, tries: {} }}",
-            self.registers_size, self.debug_info_item.is_some(), self.ins_size, self.outs_size, self.tries.is_some())
+            self.registers_size, self.debug_info_item.is_some(), self.ins_size, self.outs_size, self.tries.len())
     }
 }
 
@@ -95,10 +98,18 @@ pub struct TryCatchHandlers {
 }
 
 /// List of try-catch blocks found in this method.
-#[derive(Debug, Getters, CopyGetters)]
+#[derive(Debug, Default, Getters, CopyGetters)]
 pub struct Tries {
     #[get = "pub"]
     try_catch_blocks: Vec<TryCatchHandlers>,
+}
+
+impl Deref for Tries {
+    type Target = Vec<TryCatchHandlers>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.try_catch_blocks
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, (usize, &super::Dex<S>)> for Tries
@@ -200,10 +211,10 @@ where
         if insns_size % 2 != 0 && tries_size != 0 {
             source.gread_with::<ushort>(offset, endian)?;
         }
-        let tries: Option<Tries> = if tries_size != 0 {
-            Some(source.gread_with(offset, (tries_size as usize, dex))?)
+        let tries: Tries = if tries_size != 0 {
+            source.gread_with(offset, (tries_size as usize, dex))?
         } else {
-            None
+            Default::default()
         };
         Ok((
             Self {

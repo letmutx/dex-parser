@@ -23,7 +23,7 @@ mod utils;
 pub mod annotation;
 mod cache;
 pub mod class;
-mod code;
+pub mod code;
 mod dex;
 mod encoded_item;
 pub mod encoded_value;

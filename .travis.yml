@@ -1,0 +1,42 @@
+language: java
+jdk: oraclejdk8
+dist: trusty
+
+before_cache:
+  # Do not cache a few Gradle files/directories (see https://docs.travis-ci.com/user/languages/java/#Caching)
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+  - cargo sweep --file
+  - rm -rf "$TRAVIS_HOME/.cargo/registry/src"
+
+before_script:
+  - cargo install cargo-sweep --force
+  - cargo sweep --stamp
+
+cache:
+  directories:
+    # Android SDK
+    - $HOME/android-sdk-dl
+    - $HOME/android-sdk
+    
+    # cargo
+    - $HOME/.cargo
+    - $TRAVIS_BUILD_DIR/target
+
+
+install:
+  # Download and unzip the Android SDK tools (if not already there thanks to the cache mechanism)
+  # Latest version available here: https://developer.android.com/studio/#command-tools
+  - curl -sSf https://build.travis-ci.org/files/rustup-init.sh | sh -s -- --default-toolchain=stable --profile=minimal -y
+  - rustup update
+  - if test ! -e $HOME/android-sdk-dl/sdk-tools.zip ; then curl https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip > $HOME/android-sdk-dl/sdk-tools.zip ; fi
+  - unzip -qq -n $HOME/android-sdk-dl/sdk-tools.zip -d $HOME/android-sdk
+
+  # Install or update Android SDK components (will not do anything if already up to date thanks to the cache mechanism)
+  - echo y | $HOME/android-sdk/tools/bin/sdkmanager 'build-tools;29.0.2' > /dev/null
+  - echo y | $HOME/android-sdk/tools/bin/sdkmanager 'platforms;android-29' > /dev/null
+
+env:
+    - ANDROID_HOME="$HOME/android-sdk" ANDROID_LIB_PATH="$HOME/android-sdk/platforms/android-29/android.jar" PATH="$TRAVIS_HOME/.cargo/bin:$HOME/android-sdk/build-tools/29.0.2/:$PATH"
+
+script: cargo test --verbose --all

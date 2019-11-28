@@ -28,7 +28,6 @@ pub struct CodeItem {
     #[get_copy = "pub"]
     registers_size: ushort,
     /// Line number and source file information.
-    #[get = "pub"]
     debug_info_item: Option<DebugInfoItem>,
     /// Number of words for incoming arguments to this method.
     #[get_copy = "pub"]
@@ -42,6 +41,13 @@ pub struct CodeItem {
     /// Try, Exception handling information of this method.
     #[get = "pub"]
     tries: Tries,
+}
+
+impl CodeItem {
+    /// Line number and source file information.
+    pub fn debug_info_item(&self) -> Option<&DebugInfoItem> {
+        self.debug_info_item.as_ref()
+    }
 }
 
 impl fmt::Debug for CodeItem {

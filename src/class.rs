@@ -57,7 +57,6 @@ pub struct Class {
     #[get = "pub"]
     pub(crate) interfaces: Vec<Type>,
     /// The file in which this class is found in the source code.
-    #[get = "pub"]
     pub(crate) source_file: Option<DexString>,
     /// Static fields defined in the class.
     pub(crate) static_fields: Vec<Field>,
@@ -73,6 +72,11 @@ pub struct Class {
 }
 
 impl Class {
+    /// The file in which this class is found in the source code.
+    pub fn source_file(&self) -> Option<&DexString> {
+        self.source_file.as_ref()
+    }
+
     /// Static fields defined in the class.
     pub fn static_fields(&self) -> impl Iterator<Item = &Field> + '_ {
         self.static_fields.iter()

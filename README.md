@@ -1,5 +1,7 @@
 # Dex
 
+[![Build Status](https://api.travis-ci.org/letmutx/dex-parser.svg?branch=master)](https://travis-ci.org/letmutx/dex-parser)
+
 Dex is a parser for Android's [Dex](https://source.android.com/devices/tech/dalvik/dex-format) format written completely in Rust.
 
 Most of the functionality to access the data structures in the file is implemented but has not been thoroughly tested yet. I plan to write more unit tests, integration tests soon.

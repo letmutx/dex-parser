@@ -365,8 +365,8 @@ test!(
     |dex: dex::Dex<_>| {
         use dex::field::AccessFlags;
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
-        assert_eq!(class.static_fields().count(), 1);
-        assert_eq!(class.instance_fields().count(), 8);
+        assert_eq!(class.static_fields().len(), 1);
+        assert_eq!(class.instance_fields().len(), 8);
         let find = |name, jtype| {
             let field = class.fields().find(|f| f.name() == name);
             assert!(field.is_some(), format!("name: {}, type: {}", name, jtype));
@@ -710,8 +710,8 @@ test!(
     |dex: dex::Dex<_>| {
         use dex::method::AccessFlags;
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
-        assert_eq!(class.direct_methods().count(), 9);
-        assert_eq!(class.virtual_methods().count(), 21);
+        assert_eq!(class.direct_methods().len(), 9);
+        assert_eq!(class.virtual_methods().len(), 21);
 
         let find = |name, params: &[&str], return_type: &str| {
             let method = class.methods().find(|m| {

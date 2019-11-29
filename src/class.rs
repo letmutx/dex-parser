@@ -59,12 +59,16 @@ pub struct Class {
     /// The file in which this class is found in the source code.
     pub(crate) source_file: Option<DexString>,
     /// Static fields defined in the class.
+    #[get = "pub"]
     pub(crate) static_fields: Vec<Field>,
     /// Instance fields defined in the class.
+    #[get = "pub"]
     pub(crate) instance_fields: Vec<Field>,
     /// List of static, private methods and constructors defined in the class.
+    #[get = "pub"]
     pub(crate) direct_methods: Vec<Method>,
     /// List of parent class methods overriden by this class.
+    #[get = "pub"]
     pub(crate) virtual_methods: Vec<Method>,
     /// Annotations of the class.
     #[get = "pub"]
@@ -77,34 +81,18 @@ impl Class {
         self.source_file.as_ref()
     }
 
-    /// Static fields defined in the class.
-    pub fn static_fields(&self) -> impl Iterator<Item = &Field> + '_ {
-        self.static_fields.iter()
-    }
-
-    /// Instance fields defined in the class.
-    pub fn instance_fields(&self) -> impl Iterator<Item = &Field> + '_ {
-        self.instance_fields.iter()
-    }
-
-    /// List of static, private methods and constructors defined in the class.
-    pub fn direct_methods(&self) -> impl Iterator<Item = &Method> + '_ {
-        self.direct_methods.iter()
-    }
-
-    /// List of parent class methods overriden by this class.
-    pub fn virtual_methods(&self) -> impl Iterator<Item = &Method> + '_ {
-        self.virtual_methods.iter()
-    }
-
     /// List of fields defined in this class.
     pub fn fields(&self) -> impl Iterator<Item = &Field> + '_ {
-        self.static_fields().chain(self.instance_fields())
+        self.static_fields()
+            .iter()
+            .chain(self.instance_fields().iter())
     }
 
     /// List of methods defined in this class.
     pub fn methods(&self) -> impl Iterator<Item = &Method> + '_ {
-        self.direct_methods().chain(self.virtual_methods())
+        self.direct_methods()
+            .iter()
+            .chain(self.virtual_methods().iter())
     }
 
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(

@@ -58,7 +58,6 @@ pub struct Method {
     #[get = "pub"]
     return_type: Type,
     /// Code and DebugInfo of the method.
-    #[get = "pub"]
     code: Option<CodeItem>,
     /// Annotations of the method.
     #[get = "pub"]
@@ -66,6 +65,13 @@ pub struct Method {
     /// Annotations of the params.
     #[get = "pub"]
     param_annotations: AnnotationSetRefList,
+}
+
+impl Method {
+    /// Code and DebugInfo of the method.
+    pub fn code(&self) -> Option<&CodeItem> {
+        self.code.as_ref()
+    }
 }
 
 /// Index into the `ProtoId`s list.

@@ -47,7 +47,6 @@ pub struct Field {
     /// Initial value of the field. Always `None` for non-static fields.
     /// If the value is `None`, it is not guaranteed that initial_value is `null`
     /// at runtime. The field might be initialized in `<clinit>` method.
-    #[get = "pub"]
     initial_value: Option<EncodedValue>,
     /// Annotations of the field.
     #[get = "pub"]
@@ -55,6 +54,13 @@ pub struct Field {
 }
 
 impl Field {
+    /// Initial value of the field. Always `None` for non-static fields.
+    /// If the value is `None`, it is not guaranteed that initial_value is `null`
+    /// at runtime. The field might be initialized in `<clinit>` method.
+    pub fn initial_value(&self) -> Option<&EncodedValue> {
+        self.initial_value.as_ref()
+    }
+
     pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         encoded_field: &EncodedField,

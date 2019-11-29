@@ -444,26 +444,26 @@ test!(
             let field = field.unwrap();
             field.initial_value()
         };
-        assert_eq!(*get_value("b"), Some(EncodedValue::Byte(120)));
-        assert_eq!(*get_value("nb"), Some(EncodedValue::Byte(-100)));
-        assert_eq!(*get_value("s"), Some(EncodedValue::Short(10000)));
-        assert_eq!(*get_value("ns"), Some(EncodedValue::Short(-12048)));
-        assert_eq!(*get_value("i"), Some(EncodedValue::Int(12540)));
-        assert_eq!(*get_value("ni"), Some(EncodedValue::Int(-12540)));
-        assert_eq!(*get_value("l"), Some(EncodedValue::Long(43749374797)));
-        assert_eq!(*get_value("nl"), Some(EncodedValue::Long(-43749374797)));
-        assert_eq!(*get_value("f"), Some(EncodedValue::Float(9.30)));
-        assert_eq!(*get_value("nf"), Some(EncodedValue::Float(-9.34)));
-        assert_eq!(*get_value("d"), Some(EncodedValue::Double(4374.943749374937)));
-        assert_eq!(*get_value("nd"), Some(EncodedValue::Double(-1257.9374937493)));
-        assert_eq!(*get_value("bo"), Some(EncodedValue::Boolean(true)));
-        assert_eq!(*get_value("nbo"), Some(EncodedValue::Boolean(false)));
-        assert_eq!(*get_value("c"), Some(EncodedValue::Char(b'm'.into())));
-        assert_eq!(*get_value("nullString"), Some(EncodedValue::Null));
-        assert_eq!(*get_value("nonNullString"), Some(EncodedValue::String(DexString::from("fjdljfdlj".to_string()))));
-        assert_eq!(*get_value("remapper"), Some(EncodedValue::Null));
-        assert_eq!(*get_value("r"), Some(EncodedValue::Null));
-        assert_eq!(*get_value("array"), Some(EncodedValue::Null));
+        assert_eq!(get_value("b"), Some(&EncodedValue::Byte(120)));
+        assert_eq!(get_value("nb"), Some(&EncodedValue::Byte(-100)));
+        assert_eq!(get_value("s"), Some(&EncodedValue::Short(10000)));
+        assert_eq!(get_value("ns"), Some(&EncodedValue::Short(-12048)));
+        assert_eq!(get_value("i"), Some(&EncodedValue::Int(12540)));
+        assert_eq!(get_value("ni"), Some(&EncodedValue::Int(-12540)));
+        assert_eq!(get_value("l"), Some(&EncodedValue::Long(43749374797)));
+        assert_eq!(get_value("nl"), Some(&EncodedValue::Long(-43749374797)));
+        assert_eq!(get_value("f"), Some(&EncodedValue::Float(9.30)));
+        assert_eq!(get_value("nf"), Some(&EncodedValue::Float(-9.34)));
+        assert_eq!(get_value("d"), Some(&EncodedValue::Double(4374.943749374937)));
+        assert_eq!(get_value("nd"), Some(&EncodedValue::Double(-1257.9374937493)));
+        assert_eq!(get_value("bo"), Some(&EncodedValue::Boolean(true)));
+        assert_eq!(get_value("nbo"), Some(&EncodedValue::Boolean(false)));
+        assert_eq!(get_value("c"), Some(&EncodedValue::Char(b'm'.into())));
+        assert_eq!(get_value("nullString"), Some(&EncodedValue::Null));
+        assert_eq!(get_value("nonNullString"), Some(&EncodedValue::String(DexString::from("fjdljfdlj".to_string()))));
+        assert_eq!(get_value("remapper"), Some(&EncodedValue::Null));
+        assert_eq!(get_value("r"), Some(&EncodedValue::Null));
+        assert_eq!(get_value("array"), Some(&EncodedValue::Null));
     }
 );
 

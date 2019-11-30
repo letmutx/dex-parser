@@ -59,3 +59,12 @@ where
         .map(|type_id| dex.get_type(TypeId::from(*type_id)))
         .collect()
 }
+
+macro_rules! gen_is_flag_set {
+    ($name: ident, $flag: ident) => {
+        /// Returns `true` if the access flag is set
+        pub fn $name(&self) -> bool {
+            self.access_flags().contains(AccessFlags::$flag)
+        }
+    }
+}

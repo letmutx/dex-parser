@@ -76,6 +76,17 @@ pub struct Class {
 }
 
 impl Class {
+    gen_is_flag_set!(is_public, PUBLIC);
+    gen_is_flag_set!(is_private, PRIVATE);
+    gen_is_flag_set!(is_protected, PROTECTED);
+    gen_is_flag_set!(is_static, STATIC);
+    gen_is_flag_set!(is_final, FINAL);
+    gen_is_flag_set!(is_interface, INTERFACE);
+    gen_is_flag_set!(is_abstract, ABSTRACT);
+    gen_is_flag_set!(is_synthetic, SYNTHETIC);
+    gen_is_flag_set!(is_annotation, ANNOTATION);
+    gen_is_flag_set!(is_enum, ENUM);
+
     /// The file in which this class is found in the source code.
     pub fn source_file(&self) -> Option<&DexString> {
         self.source_file.as_ref()

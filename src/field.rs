@@ -24,7 +24,6 @@ bitflags! {
         const VOLATILE = 0x40;
         const TRANSIENT = 0x80;
         const SYNTHETIC = 0x1000;
-        const ANNOTATION = 0x2000;
         const ENUM = 0x4000;
     }
 }
@@ -60,6 +59,16 @@ impl Field {
     pub fn initial_value(&self) -> Option<&EncodedValue> {
         self.initial_value.as_ref()
     }
+
+    gen_is_flag_set!(is_public, PUBLIC);
+    gen_is_flag_set!(is_private, PRIVATE);
+    gen_is_flag_set!(is_protected, PROTECTED);
+    gen_is_flag_set!(is_static, STATIC);
+    gen_is_flag_set!(is_final, FINAL);
+    gen_is_flag_set!(is_volatile, VOLATILE);
+    gen_is_flag_set!(is_transient, TRANSIENT);
+    gen_is_flag_set!(is_synthetic, SYNTHETIC);
+    gen_is_flag_set!(is_enum, ENUM);
 
     pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,

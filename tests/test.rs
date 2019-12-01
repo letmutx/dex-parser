@@ -77,7 +77,7 @@ impl TestBuilder {
 macro_rules! assert_has_access_flags {
     ($item: ident, [ $($flag: ident),+ ], $msg:expr) => {
         $(
-            assert!($item.access_flags().contains(AccessFlags::$flag), $msg);
+            assert!($item.$flag(), $msg);
         )*
     };
 
@@ -150,7 +150,6 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
-        use dex::class::AccessFlags;
         assert_eq!(dex.header().class_defs_size(), 4);
         let find = |name| {
             let class = dex.find_class_by_name(name);
@@ -160,10 +159,10 @@ test!(
             class.unwrap()
         };
         let interface = find("LMyInterface;");
-        assert!(interface.access_flags().contains(AccessFlags::INTERFACE));
+        assert!(interface.is_interface());
 
         let enum_class = find("LDay;");
-        assert!(enum_class.access_flags().contains(AccessFlags::ENUM));
+        assert!(enum_class.is_enum());
     }
 );
 
@@ -211,7 +210,6 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
-        use dex::class::AccessFlags;
         use dex::annotation::Visibility;
         use dex::encoded_value::EncodedValue;
 
@@ -220,7 +218,7 @@ test!(
         let annotation_class = annotation_class.unwrap();
         assert!(annotation_class.is_some());
         let annotation_class = annotation_class.unwrap();
-        assert_has_access_flags!(annotation_class, [PUBLIC, ANNOTATION]);
+        assert_has_access_flags!(annotation_class, [is_public, is_annotation]);
         assert_eq!(annotation_class.methods().count(), 2);
 
         let runtime_annotation_class = dex.find_class_by_name("LRuntimeAnnotation;");
@@ -228,7 +226,7 @@ test!(
         let runtime_annotation_class = runtime_annotation_class.unwrap();
         assert!(runtime_annotation_class.is_some());
         let runtime_annotation_class = runtime_annotation_class.unwrap();
-        assert_has_access_flags!(runtime_annotation_class, [ANNOTATION]);
+        assert_has_access_flags!(runtime_annotation_class, [is_annotation]);
 
 
         let class = dex.find_class_by_name("LMain;");
@@ -363,7 +361,6 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
-        use dex::field::AccessFlags;
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
         assert_eq!(class.static_fields().len(), 1);
         assert_eq!(class.instance_fields().len(), 8);
@@ -375,19 +372,19 @@ test!(
             field
         };
         let static_field = find("staticVar", "I");
-        assert_has_access_flags!(static_field, [STATIC, PUBLIC]);
+        assert_has_access_flags!(static_field, [is_static, is_public]);
 
         let final_field = find("finalVar", "D");
-        assert_has_access_flags!(final_field, [FINAL]);
+        assert_has_access_flags!(final_field, [is_final]);
 
         let protected_field = find("protectedField", "Ljava/lang/String;");
-        assert_has_access_flags!(protected_field, [PROTECTED]);
+        assert_has_access_flags!(protected_field, [is_protected]);
 
         let private_field = find("privateField", "Ljava/lang/String;");
-        assert_has_access_flags!(private_field, [PRIVATE]);
+        assert_has_access_flags!(private_field, [is_private]);
 
         let public_field = find("publicField", "Ljava/lang/String;");
-        assert_has_access_flags!(public_field, [PUBLIC]);
+        assert_has_access_flags!(public_field, [is_public]);
 
         let array_field = find("arrayField", "[I");
         assert!(array_field.access_flags().is_empty());
@@ -503,19 +500,16 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
-        use dex::class::AccessFlags;
         use dex::class::Class;
         let validate_interface_methods = |interface: &Class| {
             interface.methods().for_each(|m| {
-                use dex::method::AccessFlags;
-                assert_has_access_flags!(m, [PUBLIC, ABSTRACT], format!("interface method: {} doesn't have all attributes", m.name()));
+                assert_has_access_flags!(m, [is_public, is_abstract], format!("interface method: {} doesn't have all attributes", m.name()));
                 assert!(m.code().is_none(), format!("interface method: {} shouldn't have code item", m.name()));
             });
         };
         let validate_interface_fields = |interface: &Class| {
             interface.fields().for_each(|f| {
-                use dex::field::AccessFlags;
-                assert_has_access_flags!(f, [PUBLIC, STATIC, FINAL], format!("interface field: {} doesn't have all attributes", f.name()));
+                assert_has_access_flags!(f, [is_public, is_static, is_final], format!("interface field: {} doesn't have all attributes", f.name()));
             });
         };
 
@@ -524,7 +518,7 @@ test!(
         let interface = interface.unwrap();
         assert!(interface.is_some());
         let interface = interface.unwrap();
-        assert_has_access_flags!(interface, [INTERFACE]);
+        assert_has_access_flags!(interface, [is_interface]);
         assert_eq!(interface.fields().count(), 2);
         assert_eq!(interface.methods().count(), 2);
         validate_interface_fields(&interface);
@@ -535,7 +529,7 @@ test!(
         let interface2 = interface2.unwrap();
         assert!(interface2.is_some());
         let interface2 = interface2.unwrap();
-        assert_has_access_flags!(interface2, [PUBLIC, INTERFACE]);
+        assert_has_access_flags!(interface2, [is_public, is_interface]);
         assert_eq!(interface2.methods().count(), 2);
         assert_eq!(interface2.fields().count(), 0);
         validate_interface_fields(&interface2);
@@ -548,7 +542,7 @@ test!(
         let interface3 = dex.classes().find(|c| {
             let c = c.as_ref().expect("error finding synthetic class");
             c.jtype().type_descriptor().starts_with("LMyInterface3") &&
-            c.access_flags().contains(AccessFlags::SYNTHETIC)
+            c.is_synthetic()
         });
         assert!(interface3.is_some());
         let interface3 = interface3.unwrap();
@@ -558,10 +552,7 @@ test!(
         let method = interface3.methods().take(1).next();
         assert!(method.is_some());
         let method = method.unwrap();
-        {
-            use dex::method::AccessFlags;
-            assert_has_access_flags!(method, [STATIC]);
-        }
+        assert_has_access_flags!(method, [is_static]);
     }
 );
 
@@ -577,13 +568,12 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
-        use dex::class::AccessFlags;
         let abstract_class = dex.find_class_by_name("LAbstractClass;");
         assert!(abstract_class.is_ok());
         let abstract_class = abstract_class.unwrap();
         assert!(abstract_class.is_some());
         let abstract_class = abstract_class.unwrap();
-        assert_has_access_flags!(abstract_class, [ABSTRACT]);
+        assert_has_access_flags!(abstract_class, [is_abstract]);
         assert_eq!(abstract_class.methods().count(), 4);
         let mut methods = abstract_class.methods().map(|m| m.name()).collect::<Vec<_>>();
         methods.sort();
@@ -591,11 +581,8 @@ test!(
         expected.sort();
         assert_eq!(&methods, expected);
         let abstract_method = abstract_class.methods().find(|m| m.name() == "abstractMethod").unwrap();
-        {
-            use dex::method::AccessFlags;
-            assert!(abstract_method.code().is_none());
-            assert_has_access_flags!(abstract_method, [PUBLIC, ABSTRACT]);
-        }
+        assert!(abstract_method.code().is_none());
+        assert_has_access_flags!(abstract_method, [is_public, is_abstract]);
     }
 );
 
@@ -610,21 +597,17 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
-        use dex::class::AccessFlags;
         let enum_class = dex.find_class_by_name("LEnumClass;");
         assert!(enum_class.is_ok());
         let enum_class = enum_class.unwrap();
         assert!(enum_class.is_some());
         let enum_class = enum_class.unwrap();
-        assert_has_access_flags!(enum_class, [ENUM]);
+        assert_has_access_flags!(enum_class, [is_enum]);
 
-        {
-            use dex::field::AccessFlags;
-            let sunday = enum_class.fields().find(|f| f.name() == "SUNDAY");
-            assert!(sunday.is_some());
-            let sunday = sunday.unwrap();
-            assert_has_access_flags!(sunday, [ENUM]);
-        }
+        let sunday = enum_class.fields().find(|f| f.name() == "SUNDAY");
+        assert!(sunday.is_some());
+        let sunday = sunday.unwrap();
+        assert_has_access_flags!(sunday, [is_enum]);
     }
 );
 
@@ -708,7 +691,6 @@ test!(
         "#
     },
     |dex: dex::Dex<_>| {
-        use dex::method::AccessFlags;
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
         assert_eq!(class.direct_methods().len(), 9);
         assert_eq!(class.virtual_methods().len(), 21);
@@ -731,27 +713,27 @@ test!(
 
         let final_method = find("finalMethod", &[], "V");
         assert!(final_method.code().is_some());
-        assert_has_access_flags!(final_method, [FINAL]);
+        assert_has_access_flags!(final_method, [is_final]);
         assert_eq!(final_method.shorty(), "V");
 
         let static_method = find("staticMethod", &[], "V");
         assert!(static_method.code().is_some());
-        assert_has_access_flags!(static_method, [STATIC]);
+        assert_has_access_flags!(static_method, [is_static]);
         assert_eq!(static_method.shorty(), "V");
 
         let public_method = find("publicMethod", &[], "V");
         assert!(public_method.code().is_some());
-        assert_has_access_flags!(public_method, [PUBLIC]);
+        assert_has_access_flags!(public_method, [is_public]);
         assert_eq!(public_method.shorty(), "V");
 
         let private_method = find("privateMethod", &[], "V");
         assert!(private_method.code().is_some());
-        assert_has_access_flags!(private_method, [PRIVATE]);
+        assert_has_access_flags!(private_method, [is_private]);
         assert_eq!(private_method.shorty(), "V");
 
         let protected_method = find("protectedMethod", &[], "V");
         assert!(protected_method.code().is_some());
-        assert_has_access_flags!(protected_method, [PROTECTED]);
+        assert_has_access_flags!(protected_method, [is_protected]);
         assert_eq!(protected_method.shorty(), "V");
 
 
@@ -814,39 +796,39 @@ test!(
 
         let generic_params_method  = find("genericParamsMethod1", &["Ljava/util/List;", "I"], "V");
         assert!(generic_params_method.code().is_some());
-        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
 
         let generic_params_method  = find("genericParamsMethod2", &["Ljava/lang/Object;", "I"], "V");
         assert!(generic_params_method.code().is_some());
-        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
 
         let generic_params_method  = find("genericParamsMethod3", &["Ljava/util/List;", "I"], "V");
         assert!(generic_params_method.code().is_some());
-        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
 
         let generic_params_method  = find("genericParamsMethod4", &["Ljava/util/List;", "I"], "V");
         assert!(generic_params_method.code().is_some());
-        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
 
 
         let generic_params_method  = find("genericParamWithExtendsClauseMethod", &["LSuperClass;"], "V");
         assert!(generic_params_method.code().is_some());
-        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VL");
 
         let generic_params_method  = find("genericParamWithMultipleExtendsClauseMethod", &["LSuperClass;"], "V");
         assert!(generic_params_method.code().is_some());
-        assert_has_access_flags!(generic_params_method, [PRIVATE]);
+        assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VL");
 
 
         let varargs_method = find("varargsMethod", &["[Ljava/lang/String;"], "I");
         assert!(varargs_method.code().is_some());
-        assert_has_access_flags!(varargs_method, [PUBLIC, VARARGS]);
+        assert_has_access_flags!(varargs_method, [is_public, is_varargs]);
         assert_eq!(varargs_method.shorty(), "IL");
 
 
@@ -861,23 +843,23 @@ test!(
 
         let interface_method = find("interfaceMethod", &["I", "Ljava/lang/String;"], "Ljava/lang/String;");
         assert!(interface_method.code().is_some());
-        assert_has_access_flags!(interface_method, [PUBLIC]);
+        assert_has_access_flags!(interface_method, [is_public]);
         assert_eq!(interface_method.shorty(), "LIL");
 
 
         let native_method = find("nativeMethod", &["I", "Ljava/lang/String;"], "Ljava/lang/String;");
         assert!(native_method.code().is_none());
-        assert_has_access_flags!(native_method, [PUBLIC, NATIVE]);
+        assert_has_access_flags!(native_method, [is_public, is_native]);
         assert_eq!(native_method.shorty(), "LIL");
 
         let abstract_method = find("abstractMethod", &["I"], "I");
         assert!(abstract_method.code().is_none());
-        assert_has_access_flags!(abstract_method, [ABSTRACT]);
+        assert_has_access_flags!(abstract_method, [is_abstract]);
         assert_eq!(abstract_method.shorty(), "II");
 
         let synchronized_method = find("synchronizedMethod", &["I"], "I");
         assert!(synchronized_method.code().is_some());
-        assert_has_access_flags!(synchronized_method, [DECLARED_SYNCHRONIZED]);
+        assert_has_access_flags!(synchronized_method, [is_declared_synchronized]);
         assert_eq!(synchronized_method.shorty(), "II");
     }
 );

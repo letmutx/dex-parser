@@ -68,6 +68,21 @@ pub struct Method {
 }
 
 impl Method {
+    gen_is_flag_set!(is_public, PUBLIC);
+    gen_is_flag_set!(is_private, PRIVATE);
+    gen_is_flag_set!(is_protected, PROTECTED);
+    gen_is_flag_set!(is_static, STATIC);
+    gen_is_flag_set!(is_final, FINAL);
+    gen_is_flag_set!(is_synchronized, SYNCHRONIZED);
+    gen_is_flag_set!(is_bridge, BRIDGE);
+    gen_is_flag_set!(is_varargs, VARARGS);
+    gen_is_flag_set!(is_native, NATIVE);
+    gen_is_flag_set!(is_abstract, ABSTRACT);
+    gen_is_flag_set!(is_strict, STRICT);
+    gen_is_flag_set!(is_synthetic, SYNTHETIC);
+    gen_is_flag_set!(is_constructor, CONSTRUCTOR);
+    gen_is_flag_set!(is_declared_synchronized, DECLARED_SYNCHRONIZED);
+
     /// Code and DebugInfo of the method.
     pub fn code(&self) -> Option<&CodeItem> {
         self.code.as_ref()

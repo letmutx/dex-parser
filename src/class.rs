@@ -13,7 +13,7 @@ use crate::{
     method::{EncodedMethodArray, Method},
     source::Source,
     string::DexString,
-    uint,
+    uint, utils,
 };
 
 /// `ClassId` is an index into the Types section. The corresponding `Type` denotes the type of
@@ -86,6 +86,11 @@ impl Class {
     gen_is_flag_set!(is_synthetic, SYNTHETIC);
     gen_is_flag_set!(is_annotation, ANNOTATION);
     gen_is_flag_set!(is_enum, ENUM);
+
+    /// Returns the value of `dalvik.annotation.Signature`.
+    pub fn signature(&self) -> super::Result<Option<String>> {
+        utils::get_signature(self.annotations())
+    }
 
     /// The file in which this class is found in the source code.
     pub fn source_file(&self) -> Option<&DexString> {

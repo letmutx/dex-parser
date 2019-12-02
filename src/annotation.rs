@@ -5,8 +5,13 @@ use std::ops::Deref;
 use getset::{CopyGetters, Getters};
 
 use crate::{
-    encoded_value::EncodedValue, error::Error, field::FieldId, jtype::TypeId, method::MethodId,
-    string::StringId, ubyte, uint,
+    encoded_value::EncodedValue,
+    error::Error,
+    field::FieldId,
+    jtype::{Type, TypeId},
+    method::MethodId,
+    string::{DexString, StringId},
+    ubyte, uint,
 };
 
 use num_derive::FromPrimitive;
@@ -14,14 +19,20 @@ use num_traits::FromPrimitive;
 
 /// Contains the type and parameters of an Annotation.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoded-annotation)
-#[derive(Debug, Getters, CopyGetters, PartialEq)]
+#[derive(Debug, Getters, PartialEq)]
+#[get = "pub"]
 pub struct EncodedAnnotation {
     /// Type of the annotation. Should be a class type.
-    #[get_copy = "pub"]
-    type_idx: TypeId,
+    jtype: Type,
     /// Elements of the annotation
-    #[get = "pub"]
     elements: Vec<AnnotationElement>,
+}
+
+impl EncodedAnnotation {
+    /// Find element with the `name`
+    pub fn find_element(&self, name: &str) -> Option<&AnnotationElement> {
+        self.elements().iter().find(|e| e.name() == name)
+    }
 }
 
 impl Deref for EncodedAnnotation {
@@ -42,25 +53,24 @@ where
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let type_idx = Uleb128::read(source, offset)?;
-        let type_idx = type_idx as TypeId;
+        let jtype = ctx.get_type(type_idx as TypeId)?;
         let size = Uleb128::read(source, offset)?;
-        debug!(target: "encoded-annotation", "type: {}, size: {}", type_idx, size);
+        debug!(target: "encoded-annotation", "type: {}, size: {}", jtype, size);
         let elements = try_gread_vec_with!(source, offset, size, ctx);
-        Ok((Self { type_idx, elements }, *offset))
+        Ok((Self { jtype, elements }, *offset))
     }
 }
 
 /// Represents a parameter of an annotation. For example, if `@Author(name = "Benjamin Franklin")`, is
 /// the annotation, this structure represents `name = "Benjamin Franklin"`.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#annotation-element)
-#[derive(Debug, Getters, CopyGetters, PartialEq)]
+#[derive(Debug, Getters, PartialEq)]
+#[get = "pub"]
 pub struct AnnotationElement {
-    /// Name of the element. Should conform to
-    /// https://source.android.com/devices/tech/dalvik/dex-format#membername
-    #[get_copy = "pub"]
-    name_idx: StringId,
+    /// Name of the element. Should conform to the syntax defined
+    /// [here](https://source.android.com/devices/tech/dalvik/dex-format#membername)
+    name: DexString,
     /// Value corresponding to the name.
-    #[get = "pub"]
     value: EncodedValue,
 }
 
@@ -74,10 +84,10 @@ where
     fn try_from_ctx(source: &'a [u8], ctx: &super::Dex<S>) -> super::Result<(Self, Self::Size)> {
         let offset = &mut 0;
         let name_idx = Uleb128::read(source, offset)?;
-        let name_idx = name_idx as StringId;
+        let name = ctx.get_string(name_idx as StringId)?;
         debug!(target: "annotation-element", "annotation element: {}", name_idx);
         let value = source.gread_with(offset, ctx)?;
-        Ok((Self { name_idx, value }, *offset))
+        Ok((Self { name, value }, *offset))
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
     error::Error,
     jtype::{Type, TypeId},
     string::{DexString, StringId},
-    ulong, ushort,
+    ulong, ushort, utils,
 };
 use getset::{CopyGetters, Getters};
 
@@ -69,6 +69,11 @@ impl Field {
     gen_is_flag_set!(is_transient, TRANSIENT);
     gen_is_flag_set!(is_synthetic, SYNTHETIC);
     gen_is_flag_set!(is_enum, ENUM);
+
+    /// Returns the value of `dalvik.annotation.Signature`.
+    pub fn signature(&self) -> super::Result<Option<String>> {
+        utils::get_signature(self.annotations())
+    }
 
     pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,

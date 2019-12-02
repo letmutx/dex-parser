@@ -1,5 +1,8 @@
 use crate::{
+    annotation::AnnotationSetItem,
     encoded_item::{EncodedItem, EncodedItemArray},
+    encoded_value::EncodedValue,
+    error::Error,
     jtype::{Type, TypeId},
     ushort,
 };
@@ -67,4 +70,39 @@ macro_rules! gen_is_flag_set {
             self.access_flags().contains(AccessFlags::$flag)
         }
     }
+}
+
+pub(crate) fn get_signature(annotations: &AnnotationSetItem) -> super::Result<Option<String>> {
+    annotations
+        .iter()
+        .find(|item| item.jtype() == "Ldalvik/annotation/Signature;")
+        .map(|item| {
+            let element = item.annotation().find_element("value");
+            if element.is_none() {
+                return Err(Error::MalFormed(
+                    "Expected element with name value, but not found".to_string(),
+                ));
+            }
+            let element = element.unwrap();
+            match *element.value() {
+                EncodedValue::Array(ref v) => {
+                    let signature: super::Result<String> = v
+                        .iter()
+                        .map(|s| {
+                            if let EncodedValue::String(ref v) = s {
+                                Ok(v.to_string())
+                            } else {
+                                Err(Error::MalFormed(format!(
+                                    "Expected string element in signature, found: {:?}",
+                                    s
+                                )))
+                            }
+                        })
+                        .collect();
+                    Ok(Some(signature?))
+                }
+                ref e => Err(Error::MalFormed(format!("Expected array, found: {:?}", e))),
+            }
+        })
+        .unwrap_or_else(|| Ok(None))
 }

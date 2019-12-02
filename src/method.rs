@@ -83,6 +83,11 @@ impl Method {
     gen_is_flag_set!(is_constructor, CONSTRUCTOR);
     gen_is_flag_set!(is_declared_synchronized, DECLARED_SYNCHRONIZED);
 
+    /// Returns the value of `dalvik.annotation.Signature`.
+    pub fn signature(&self) -> super::Result<Option<String>> {
+        utils::get_signature(self.annotations())
+    }
+
     /// Code and DebugInfo of the method.
     pub fn code(&self) -> Option<&CodeItem> {
         self.code.as_ref()

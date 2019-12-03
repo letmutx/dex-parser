@@ -293,6 +293,12 @@ test!(
     {
         "Main.java" => r#"
           class Main<T, K extends Main> {
+              boolean booleanVar;
+              byte byteVar;
+              short shortVar;
+              char charVar;
+              long longVar;
+              float floatVar;
               public static int staticVar = 42;
               final double finalVar = 32.0d;
               private String privateField;
@@ -316,7 +322,7 @@ test!(
     |dex: dex::Dex<_>| {
         let class = dex.find_class_by_name("LMain;").unwrap().unwrap();
         assert_eq!(class.static_fields().len(), 1);
-        assert_eq!(class.instance_fields().len(), 8);
+        assert_eq!(class.instance_fields().len(), 14);
         let find = |name, jtype| {
             let field = class.fields().find(|f| f.name() == name);
             assert!(field.is_some(), format!("name: {}, type: {}", name, jtype));
@@ -324,13 +330,34 @@ test!(
             assert_eq!(field.jtype(), jtype);
             field
         };
+        let boolean = find("booleanVar", "Z");
+        assert!(boolean.jtype().is_bool());
+
+        let char_var = find("charVar", "C");
+        assert!(char_var.jtype().is_char());
+
+        let short = find("shortVar", "S");
+        assert!(short.jtype().is_short());
+
+        let float = find("floatVar", "F");
+        assert!(float.jtype().is_float());
+
+        let long = find("longVar", "J");
+        assert!(long.jtype().is_long());
+
         let static_field = find("staticVar", "I");
+        assert!(!static_field.jtype().is_reference());
+        assert!(static_field.jtype().is_int());
         assert_has_access_flags!(static_field, [is_static, is_public]);
 
         let final_field = find("finalVar", "D");
+        assert!(!final_field.jtype().is_reference());
+        assert!(final_field.jtype().is_double());
         assert_has_access_flags!(final_field, [is_final]);
 
         let protected_field = find("protectedField", "Ljava/lang/String;");
+        assert!(protected_field.jtype().is_reference());
+        assert!(protected_field.jtype().is_class());
         assert_has_access_flags!(protected_field, [is_protected]);
 
         let private_field = find("privateField", "Ljava/lang/String;");
@@ -340,9 +367,14 @@ test!(
         assert_has_access_flags!(public_field, [is_public]);
 
         let array_field = find("arrayField", "[I");
+        assert!(array_field.jtype().is_array());
+        assert_eq!(array_field.jtype().array_dimensions(), Some(1));
+        assert!(array_field.jtype().is_reference());
         assert!(array_field.access_flags().is_empty());
 
         let generic_field = find("genericField", "Ljava/lang/Object;");
+        assert!(generic_field.jtype().is_reference());
+        assert_eq!(generic_field.jtype().array_dimensions(), None);
         assert!(generic_field.access_flags().is_empty());
 
         let generic_field = find("genericField2", "LMain;");

@@ -41,6 +41,105 @@ pub enum EncodedValue {
     Boolean(bool),
 }
 
+impl PartialEq<ushort> for EncodedValue {
+    fn eq(&self, other: &ushort) -> bool {
+        match self {
+            EncodedValue::Char(us) => us == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<int> for EncodedValue {
+    fn eq(&self, other: &int) -> bool {
+        match self {
+            EncodedValue::Int(val) => val == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<long> for EncodedValue {
+    fn eq(&self, other: &long) -> bool {
+        match self {
+            EncodedValue::Long(l) => l == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<short> for EncodedValue {
+    fn eq(&self, other: &short) -> bool {
+        match self {
+            EncodedValue::Short(b) => b == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<byte> for EncodedValue {
+    fn eq(&self, other: &byte) -> bool {
+        match self {
+            EncodedValue::Byte(b) => b == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<f64> for EncodedValue {
+    fn eq(&self, other: &f64) -> bool {
+        match self {
+            EncodedValue::Double(d) => d == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<f32> for EncodedValue {
+    fn eq(&self, other: &f32) -> bool {
+        match self {
+            EncodedValue::Float(f) => f == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<bool> for EncodedValue {
+    fn eq(&self, other: &bool) -> bool {
+        match self {
+            EncodedValue::Boolean(b) => b == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<Type> for EncodedValue {
+    fn eq(&self, other: &Type) -> bool {
+        match self {
+            EncodedValue::Type(t) => t == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<DexString> for EncodedValue {
+    fn eq(&self, other: &DexString) -> bool {
+        match self {
+            EncodedValue::String(s) => s == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<str> for EncodedValue {
+    fn eq(&self, other: &str) -> bool {
+        match self {
+            EncodedValue::String(s) => s == other,
+            _ => false,
+        }
+    }
+}
+
 macro_rules! gen_is_type_method {
     ($name: ident, $match_value: pat, $doc: literal) => {
         #[doc = $doc]

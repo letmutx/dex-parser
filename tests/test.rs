@@ -244,7 +244,7 @@ test!(
         assert_eq!(annotation_item.visibility(), Visibility::Build);
         let name = annotation_item.find_element("name");
         assert!(name.is_some());
-        assert_eq!(*name.unwrap().value(), EncodedValue::String("name".to_string().into()));
+        assert_eq!(name.unwrap().value(), "name");
 
         let value = annotation_item.find_element("value");
         assert!(value.is_some());

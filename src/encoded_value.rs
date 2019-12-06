@@ -41,6 +41,210 @@ pub enum EncodedValue {
     Boolean(bool),
 }
 
+impl PartialEq<ushort> for EncodedValue {
+    fn eq(&self, other: &ushort) -> bool {
+        match self {
+            EncodedValue::Char(us) => us == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<int> for EncodedValue {
+    fn eq(&self, other: &int) -> bool {
+        match self {
+            EncodedValue::Int(val) => val == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<long> for EncodedValue {
+    fn eq(&self, other: &long) -> bool {
+        match self {
+            EncodedValue::Long(l) => l == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<short> for EncodedValue {
+    fn eq(&self, other: &short) -> bool {
+        match self {
+            EncodedValue::Short(b) => b == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<byte> for EncodedValue {
+    fn eq(&self, other: &byte) -> bool {
+        match self {
+            EncodedValue::Byte(b) => b == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<f64> for EncodedValue {
+    fn eq(&self, other: &f64) -> bool {
+        match self {
+            EncodedValue::Double(d) => d == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<f32> for EncodedValue {
+    fn eq(&self, other: &f32) -> bool {
+        match self {
+            EncodedValue::Float(f) => f == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<bool> for EncodedValue {
+    fn eq(&self, other: &bool) -> bool {
+        match self {
+            EncodedValue::Boolean(b) => b == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<Type> for EncodedValue {
+    fn eq(&self, other: &Type) -> bool {
+        match self {
+            EncodedValue::Type(t) => t == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<DexString> for EncodedValue {
+    fn eq(&self, other: &DexString) -> bool {
+        match self {
+            EncodedValue::String(s) => s == other,
+            _ => false,
+        }
+    }
+}
+
+impl PartialEq<str> for EncodedValue {
+    fn eq(&self, other: &str) -> bool {
+        match self {
+            EncodedValue::String(s) => s == other,
+            _ => false,
+        }
+    }
+}
+
+macro_rules! gen_is_type_method {
+    ($name: ident, $match_value: pat, $doc: literal) => {
+        #[doc = $doc]
+        pub fn $name(&self) -> bool {
+            match self {
+                $match_value => true,
+                _ => false
+            }
+        }
+    }
+}
+
+impl EncodedValue {
+    gen_is_type_method!(
+        is_byte,
+        EncodedValue::Byte(_),
+        "Returns `true` if the value is a byte"
+    );
+    gen_is_type_method!(
+        is_short,
+        EncodedValue::Short(_),
+        "Returns `true` if the value is a short"
+    );
+    gen_is_type_method!(
+        is_char,
+        EncodedValue::Char(_),
+        "Returns `true` if the value is a char"
+    );
+    gen_is_type_method!(
+        is_int,
+        EncodedValue::Int(_),
+        "Returns `true` if the value is a int"
+    );
+    gen_is_type_method!(
+        is_long,
+        EncodedValue::Long(_),
+        "Returns `true` if the value is a long"
+    );
+    gen_is_type_method!(
+        is_type,
+        EncodedValue::Type(_),
+        "Returns `true` if the value is a `Type`"
+    );
+    gen_is_type_method!(
+        is_float,
+        EncodedValue::Float(_),
+        "Returns `true` if the value is a float"
+    );
+    gen_is_type_method!(
+        is_double,
+        EncodedValue::Double(_),
+        "Returns `true` if the value is a double"
+    );
+    gen_is_type_method!(
+        is_method_handle,
+        EncodedValue::MethodHandle(_),
+        "Returns `true` if the value is a method handle"
+    );
+    gen_is_type_method!(
+        is_method_type,
+        EncodedValue::MethodType(_),
+        "Returns `true` if the value is a method type"
+    );
+    gen_is_type_method!(
+        is_string,
+        EncodedValue::String(_),
+        "Returns `true` if the value is a string"
+    );
+    gen_is_type_method!(
+        is_field,
+        EncodedValue::Field(_),
+        "Returns `true` if the value is a field"
+    );
+    gen_is_type_method!(
+        is_method,
+        EncodedValue::Method(_),
+        "Returns `true` if the value is a method"
+    );
+    gen_is_type_method!(
+        is_annotation,
+        EncodedValue::Annotation(_),
+        "Returns `true` if the value is a annotation"
+    );
+    gen_is_type_method!(
+        is_array,
+        EncodedValue::Array(_),
+        "Returns `true` if the value is an array"
+    );
+    gen_is_type_method!(
+        is_enum,
+        EncodedValue::Enum(_),
+        "Returns `true` if the value is an enum"
+    );
+    gen_is_type_method!(
+        is_bool,
+        EncodedValue::Boolean(_),
+        "Returns `true` if the value is a bool"
+    );
+    gen_is_type_method!(
+        is_null,
+        EncodedValue::Null,
+        "Returns `true` if the value is null"
+    );
+}
+
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#value-formats)
 #[derive(FromPrimitive, Debug)]
 enum ValueType {

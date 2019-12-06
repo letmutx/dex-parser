@@ -41,6 +41,111 @@ pub enum EncodedValue {
     Boolean(bool),
 }
 
+macro_rules! gen_is_type_method {
+    ($name: ident, $match_value: pat, $doc: literal) => {
+        #[doc = $doc]
+        pub fn $name(&self) -> bool {
+            match self {
+                $match_value => true,
+                _ => false
+            }
+        }
+    }
+}
+
+impl EncodedValue {
+    gen_is_type_method!(
+        is_byte,
+        EncodedValue::Byte(_),
+        "Returns `true` if the value is a byte"
+    );
+    gen_is_type_method!(
+        is_short,
+        EncodedValue::Short(_),
+        "Returns `true` if the value is a short"
+    );
+    gen_is_type_method!(
+        is_char,
+        EncodedValue::Char(_),
+        "Returns `true` if the value is a char"
+    );
+    gen_is_type_method!(
+        is_int,
+        EncodedValue::Int(_),
+        "Returns `true` if the value is a int"
+    );
+    gen_is_type_method!(
+        is_long,
+        EncodedValue::Long(_),
+        "Returns `true` if the value is a long"
+    );
+    gen_is_type_method!(
+        is_type,
+        EncodedValue::Type(_),
+        "Returns `true` if the value is a `Type`"
+    );
+    gen_is_type_method!(
+        is_float,
+        EncodedValue::Float(_),
+        "Returns `true` if the value is a float"
+    );
+    gen_is_type_method!(
+        is_double,
+        EncodedValue::Double(_),
+        "Returns `true` if the value is a double"
+    );
+    gen_is_type_method!(
+        is_method_handle,
+        EncodedValue::MethodHandle(_),
+        "Returns `true` if the value is a method handle"
+    );
+    gen_is_type_method!(
+        is_method_type,
+        EncodedValue::MethodType(_),
+        "Returns `true` if the value is a method type"
+    );
+    gen_is_type_method!(
+        is_string,
+        EncodedValue::String(_),
+        "Returns `true` if the value is a string"
+    );
+    gen_is_type_method!(
+        is_field,
+        EncodedValue::Field(_),
+        "Returns `true` if the value is a field"
+    );
+    gen_is_type_method!(
+        is_method,
+        EncodedValue::Method(_),
+        "Returns `true` if the value is a method"
+    );
+    gen_is_type_method!(
+        is_annotation,
+        EncodedValue::Annotation(_),
+        "Returns `true` if the value is a annotation"
+    );
+    gen_is_type_method!(
+        is_array,
+        EncodedValue::Array(_),
+        "Returns `true` if the value is an array"
+    );
+    gen_is_type_method!(
+        is_enum,
+        EncodedValue::Enum(_),
+        "Returns `true` if the value is an enum"
+    );
+    gen_is_type_method!(
+        is_bool,
+        EncodedValue::Boolean(_),
+        "Returns `true` if the value is a bool"
+    );
+    gen_is_type_method!(
+        is_null,
+        EncodedValue::Null,
+        "Returns `true` if the value is null"
+    );
+}
+
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#value-formats)
 #[derive(FromPrimitive, Debug)]
 enum ValueType {

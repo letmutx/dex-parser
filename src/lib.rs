@@ -1,3 +1,5 @@
+//! Dex is a library for reading Android's
+//! [dex](https://source.android.com/devices/tech/dalvik/dex-format) file format.
 // Silence warnings in error module for now
 #![allow(bare_trait_objects)]
 
@@ -16,7 +18,7 @@ use scroll;
 
 pub use error::Error;
 
-pub use crate::dex::{Dex, DexReader};
+pub use crate::dex::{Dex, DexReader, Header};
 
 #[macro_use]
 mod utils;

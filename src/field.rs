@@ -101,7 +101,7 @@ impl Field {
 }
 
 /// List of `EncodedField`s
-pub(crate) type EncodedFieldArray = EncodedItemArray<EncodedField>;
+pub type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
 /// Defines a `Field`
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-id-item)

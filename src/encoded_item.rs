@@ -1,4 +1,5 @@
 use scroll::{ctx, Pread, Sleb128, Uleb128};
+use std::ops::Deref;
 
 use getset::Getters;
 
@@ -18,6 +19,14 @@ pub trait EncodedItem {
 #[get = "pub"]
 pub struct EncodedItemArray<T> {
     inner: Vec<T>,
+}
+
+impl<T> Deref for EncodedItemArray<T> {
+    type Target = Vec<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
 }
 
 impl<T: EncodedItem> EncodedItemArray<T> {

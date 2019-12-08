@@ -216,7 +216,6 @@ impl Class {
 /// Contains the details about fields and methods of a class.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#class-data-item)
 #[derive(Getters)]
-#[get = "pub"]
 pub struct ClassDataItem {
     /// The list of static fields in this class.
     static_fields: Option<EncodedFieldArray>,
@@ -226,6 +225,28 @@ pub struct ClassDataItem {
     direct_methods: Option<EncodedMethodArray>,
     /// Overriden methods from the super class.
     virtual_methods: Option<EncodedMethodArray>,
+}
+
+impl ClassDataItem {
+    /// The list of static fields in this class.
+    pub fn static_fields(&self) -> Option<&EncodedFieldArray> {
+        self.static_fields.as_ref()
+    }
+
+    /// The list of instance fields in this class.
+    pub fn instance_fields(&self) -> Option<&EncodedFieldArray> {
+        self.instance_fields.as_ref()
+    }
+
+    /// The list of direct methods in this class.
+    pub fn direct_methods(&self) -> Option<&EncodedMethodArray> {
+        self.direct_methods.as_ref()
+    }
+
+    /// Overriden methods from the super class.
+    pub fn virtual_methods(&self) -> Option<&EncodedMethodArray> {
+        self.virtual_methods.as_ref()
+    }
 }
 
 impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for ClassDataItem

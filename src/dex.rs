@@ -571,12 +571,44 @@ where
         self.inner.endian()
     }
 
-    pub(crate) fn class_defs(&self) -> impl Iterator<Item = Result<ClassDefItem>> + '_ {
+    /// Iterator over the class_defs section.
+    pub fn class_defs(&self) -> impl Iterator<Item = Result<ClassDefItem>> + '_ {
         let defs_len = self.inner.class_defs_len();
         let defs_offset = self.inner.class_defs_offset();
         let source = self.source.clone();
         let endian = self.get_endian();
         ClassDefItemIter::new(source, defs_offset, defs_len, endian)
+    }
+
+    /// Iterator over the type_ids section.
+    pub fn types(&self) -> impl Iterator<Item = Result<Type>> + '_ {
+        let type_ids_len = self.inner.type_ids_len();
+        (0..type_ids_len).map(move |type_id| self.get_type(type_id))
+    }
+
+    /// Iterator over the proto_ids section.
+    pub fn proto_ids(&self) -> impl Iterator<Item = Result<ProtoIdItem>> + '_ {
+        let proto_ids_len = self.inner.proto_ids_len();
+        (0..proto_ids_len).map(move |proto_id| self.get_proto_item(ProtoId::from(proto_id)))
+    }
+
+    /// Iterator over the field_ids section.
+    pub fn field_ids(&self) -> impl Iterator<Item = Result<FieldIdItem>> + '_ {
+        let field_ids_len = self.inner.field_ids_len();
+        (0..field_ids_len).map(move |field_id| self.get_field_item(FieldId::from(field_id)))
+    }
+
+    /// Iterator over the method_ids section.
+    pub fn method_ids(&self) -> impl Iterator<Item = Result<MethodIdItem>> + '_ {
+        let method_ids_len = self.inner.method_ids_len();
+        (0..method_ids_len).map(move |method_id| self.get_method_item(MethodId::from(method_id)))
+    }
+
+    /// Iterator over the method_handles section.
+    pub fn method_handles(&self) -> impl Iterator<Item = Result<MethodHandleItem>> + '_ {
+        let method_handles_len = self.inner.method_handles_len().unwrap_or(0);
+        (0..method_handles_len)
+            .map(move |method_handle_id| self.get_method_handle_item(uint::from(method_handle_id)))
     }
 
     /// Iterator over the classes

@@ -848,3 +848,28 @@ test!(
         assert_eq!(synchronized_method.shorty(), "II");
     }
 );
+
+#[test]
+fn test_iterators() {
+    use dex::DexReader;
+    let dex = DexReader::from_file("resources/classes.dex").expect("can't open dex");
+    for jtype in dex.types() {
+        assert!(jtype.is_ok());
+    }
+
+    for proto_id_item in dex.proto_ids() {
+        assert!(proto_id_item.is_ok());
+    }
+
+    for field_id_item in dex.field_ids() {
+        assert!(field_id_item.is_ok());
+    }
+
+    for method_id_item in dex.method_ids() {
+        assert!(method_id_item.is_ok());
+    }
+
+    for method_handle_item in dex.method_handles() {
+        assert!(method_handle_item.is_ok());
+    }
+}

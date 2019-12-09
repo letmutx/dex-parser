@@ -331,6 +331,7 @@ impl<T> Dex<T>
 where
     T: AsRef<[u8]>,
 {
+    /// The Header section
     pub fn header(&self) -> &Header {
         self.inner.header()
     }

@@ -226,7 +226,7 @@ impl EncodedItem for EncodedMethod {
 }
 
 /// List of `EncodedMethod`s
-pub(crate) type EncodedMethodArray = EncodedItemArray<EncodedMethod>;
+pub type EncodedMethodArray = EncodedItemArray<EncodedMethod>;
 
 impl<'a> ctx::TryFromCtx<'a, ulong> for EncodedMethod {
     type Error = Error;

@@ -202,6 +202,9 @@ impl MethodIdItem {
 /// Index into the `MethodId`s list.
 pub type MethodId = ulong;
 
+/// Index into the `MethodHandleItem`s list.
+pub type MethodHandleId = uint;
+
 /// Contains a `MethodId` along with its access flags and code.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#encoded-method)
 #[derive(Debug, Getters, CopyGetters)]

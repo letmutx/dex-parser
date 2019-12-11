@@ -19,7 +19,8 @@ use crate::{
     field::{EncodedField, Field, FieldId, FieldIdItem},
     jtype::{Type, TypeId},
     method::{
-        EncodedMethod, Method, MethodHandleItem, MethodId, MethodIdItem, ProtoId, ProtoIdItem,
+        EncodedMethod, Method, MethodHandleId, MethodHandleItem, MethodId, MethodIdItem, ProtoId,
+        ProtoIdItem,
     },
     search::Section,
     source::Source,
@@ -222,7 +223,7 @@ impl<'a> ctx::TryFromCtx<'a, ()> for DexInner {
 /// List of the entire contents of a file, in order. A given type must appear at most
 /// once in a map, entries must be ordered by initial offset and must not overlap.
 #[derive(Debug)]
-pub(crate) struct MapList {
+pub struct MapList {
     map_items: Vec<MapItem>,
 }
 
@@ -243,18 +244,21 @@ impl<'a> ctx::TryFromCtx<'a, Endian> for MapList {
 }
 
 impl MapList {
-    fn get(&self, item_type: ItemType) -> Option<MapItem> {
+    /// Returns the `MapItem` corresponding to the `ItemType`.
+    pub fn get(&self, item_type: ItemType) -> Option<MapItem> {
         self.map_items
             .iter()
             .find(|map_item| map_item.item_type == item_type)
             .cloned()
     }
 
-    fn get_offset(&self, item_type: ItemType) -> Option<uint> {
+    /// Returns the offset of the item corresponding to the `ItemType`.
+    pub fn get_offset(&self, item_type: ItemType) -> Option<uint> {
         self.get(item_type).map(|map_item| map_item.offset)
     }
 
-    fn get_len(&self, item_type: ItemType) -> Option<uint> {
+    /// Returns the length of the item corresponding to the `ItemType`.
+    pub fn get_len(&self, item_type: ItemType) -> Option<uint> {
         self.get(item_type).map(|map_item| map_item.size)
     }
 }
@@ -284,8 +288,10 @@ pub enum ItemType {
     AnnotationsDirectoryItem = 0x2006,
 }
 
-#[derive(Debug, Clone, Copy)]
-struct MapItem {
+/// Single item of the MapList.
+#[derive(Debug, Clone, Copy, CopyGetters)]
+#[get_copy = "pub"]
+pub struct MapItem {
     /// Type of the current item
     item_type: ItemType,
     /// Count of the number of items to be found at the indicated offset
@@ -336,11 +342,16 @@ where
         self.inner.header()
     }
 
+    pub fn map_list(&self) -> &MapList {
+        &self.inner.map_list
+    }
+
     pub(crate) fn is_offset_in_data_section(&self, offset: uint) -> bool {
         self.inner.data_section().contains(&offset)
     }
 
-    pub(crate) fn get_source_file(&self, file_id: StringId) -> Result<Option<DexString>> {
+    /// Source file name in which a class is defined.
+    pub fn get_source_file(&self, file_id: StringId) -> Result<Option<DexString>> {
         Ok(if file_id == NO_INDEX {
             None
         } else {
@@ -445,7 +456,8 @@ where
         self.find_class_by_type(type_id.unwrap())
     }
 
-    pub(crate) fn get_interfaces(&self, offset: uint) -> Result<Vec<Type>> {
+    /// Returns the list of types which represent the interfaces of a class.
+    pub fn get_interfaces(&self, offset: uint) -> Result<Vec<Type>> {
         debug!(target: "interfaces", "interfaces offset: {}", offset);
         if offset == 0 {
             return Ok(Default::default());
@@ -466,7 +478,8 @@ where
         utils::get_types(self, &type_ids)
     }
 
-    pub(crate) fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
+    /// Returns the `FieldIdItem` represented by a `FieldId`.
+    pub fn get_field_item(&self, field_id: FieldId) -> Result<FieldIdItem> {
         let offset = ulong::from(self.inner.field_ids_offset()) + field_id * 8;
         let max_offset = self.inner.field_ids_offset() + (self.inner.field_ids_len() - 1) * 8;
         let max_offset = ulong::from(max_offset);
@@ -481,7 +494,8 @@ where
         FieldIdItem::try_from_dex(self, offset)
     }
 
-    pub(crate) fn get_proto_item(&self, proto_id: ProtoId) -> Result<ProtoIdItem> {
+    /// Returns the `ProtoIdItem` represented by `ProtoId`.
+    pub fn get_proto_item(&self, proto_id: ProtoId) -> Result<ProtoIdItem> {
         let offset = ulong::from(self.inner.proto_ids_offset()) + proto_id * 12;
         let max_offset = ulong::from(self.inner.proto_ids_offset())
             + ulong::from((self.inner.proto_ids_len() - 1) * 12);
@@ -496,7 +510,8 @@ where
         ProtoIdItem::try_from_dex(self, offset)
     }
 
-    pub(crate) fn get_method_item(&self, method_id: MethodId) -> Result<MethodIdItem> {
+    /// Returns the `MethodIdItem` represented by `MethodId`.
+    pub fn get_method_item(&self, method_id: MethodId) -> Result<MethodIdItem> {
         let offset = ulong::from(self.inner.method_ids_offset()) + method_id * 8;
         let max_offset = self.inner.method_ids_offset() + (self.inner.method_ids_len() - 1) * 8;
         let max_offset = ulong::from(max_offset);
@@ -516,7 +531,8 @@ where
         StringsIter::new(self.strings.clone(), self.inner.strings_len() as usize)
     }
 
-    pub(crate) fn get_field(
+    /// Returns a `Field` given its component items.
+    pub fn get_field(
         &self,
         encoded_field: &EncodedField,
         initial_value: Option<EncodedValue>,
@@ -525,7 +541,8 @@ where
         Field::try_from_dex(self, encoded_field, initial_value, annotations)
     }
 
-    pub(crate) fn get_method(
+    /// Returns a `Method` given its component items.
+    pub fn get_method(
         &self,
         encoded_method: &EncodedMethod,
         method_annotations: AnnotationSetItem,
@@ -539,7 +556,8 @@ where
         )
     }
 
-    pub(crate) fn get_class_data(&self, offset: uint) -> Result<Option<ClassDataItem>> {
+    /// Returns the `ClassDataItem` at the given offset.
+    pub fn get_class_data(&self, offset: uint) -> Result<Option<ClassDataItem>> {
         debug!(target: "class-data", "class data offset: {}", offset);
         if offset == 0 {
             return Ok(None);
@@ -553,9 +571,10 @@ where
         Ok(Some(self.source.pread_with(offset as usize, self)?))
     }
 
-    pub(crate) fn get_method_handle_item(
+    /// Returns the `MethodHandleItem` represented by the `MethodHandleId`.
+    pub fn get_method_handle_item(
         &self,
-        method_handle_id: uint,
+        method_handle_id: MethodHandleId,
     ) -> Result<MethodHandleItem> {
         let err = || Error::InvalidId(format!("Invalid method handle id: {}", method_handle_id));
         let offset = self.inner.method_handles_offset().ok_or_else(err)?;
@@ -568,7 +587,8 @@ where
         self.source.gread_with(&mut (offset as usize), self)
     }
 
-    pub(crate) fn get_endian(&self) -> Endian {
+    /// Returns the endianness in the header section.
+    pub fn get_endian(&self) -> Endian {
         self.inner.endian()
     }
 
@@ -608,8 +628,9 @@ where
     /// Iterator over the method_handles section.
     pub fn method_handles(&self) -> impl Iterator<Item = Result<MethodHandleItem>> + '_ {
         let method_handles_len = self.inner.method_handles_len().unwrap_or(0);
-        (0..method_handles_len)
-            .map(move |method_handle_id| self.get_method_handle_item(uint::from(method_handle_id)))
+        (0..method_handles_len).map(move |method_handle_id| {
+            self.get_method_handle_item(MethodHandleId::from(method_handle_id))
+        })
     }
 
     /// Iterator over the classes
@@ -618,7 +639,8 @@ where
             .map(move |class_def_item| Class::try_from_dex(&self, &class_def_item?))
     }
 
-    pub(crate) fn get_code_item(&self, code_off: ulong) -> Result<Option<CodeItem>> {
+    /// Returns the `CodeItem` at the offset.
+    pub fn get_code_item(&self, code_off: ulong) -> Result<Option<CodeItem>> {
         if code_off == 0 {
             return Ok(None);
         }
@@ -631,7 +653,8 @@ where
         Ok(Some(self.source.pread_with(code_off as usize, self)?))
     }
 
-    pub(crate) fn get_annotation_item(&self, annotation_off: uint) -> Result<AnnotationItem> {
+    /// Returns the `AnnotationItem` at the offset.
+    pub fn get_annotation_item(&self, annotation_off: uint) -> Result<AnnotationItem> {
         debug!(target: "annotaion-item", "annotation item offset: {}", annotation_off);
         if !self.is_offset_in_data_section(annotation_off) {
             return Err(Error::BadOffset(
@@ -642,7 +665,8 @@ where
         Ok(self.source.pread_with(annotation_off as usize, self)?)
     }
 
-    pub(crate) fn get_annotation_set_item(
+    /// Returns the `AnnotationSetItem` at the offset.
+    pub fn get_annotation_set_item(
         &self,
         annotation_set_item_off: uint,
     ) -> Result<AnnotationSetItem> {
@@ -660,7 +684,8 @@ where
             .pread_with(annotation_set_item_off as usize, self)
     }
 
-    pub(crate) fn get_annotation_set_ref_list(
+    /// Returns the `AnnotationSetRefList` at the offset.
+    pub fn get_annotation_set_ref_list(
         &self,
         annotation_set_ref_list_off: uint,
     ) -> Result<AnnotationSetRefList> {
@@ -675,7 +700,8 @@ where
             .pread_with(annotation_set_ref_list_off as usize, self)?)
     }
 
-    pub(crate) fn get_static_values(&self, static_values_off: uint) -> Result<EncodedArray> {
+    /// Returns the `EncodedArray` representing the static values of a class at the given offset.
+    pub fn get_static_values(&self, static_values_off: uint) -> Result<EncodedArray> {
         debug!(target: "class", "static values offset: {}", static_values_off);
         if static_values_off == 0 {
             return Ok(Default::default());
@@ -689,7 +715,8 @@ where
         self.source.pread_with(static_values_off as usize, self)
     }
 
-    pub(crate) fn get_annotations_directory_item(
+    /// Returns the `AnnotationsDirectoryItem` at the offset.
+    pub fn get_annotations_directory_item(
         &self,
         annotations_directory_item_off: uint,
     ) -> Result<AnnotationsDirectoryItem> {
@@ -707,7 +734,8 @@ where
             .pread_with(annotations_directory_item_off as usize, self)
     }
 
-    pub(crate) fn get_debug_info_item(&self, debug_info_off: uint) -> Result<DebugInfoItem> {
+    /// Returns the `DebugInfoItem` at the offset.
+    pub fn get_debug_info_item(&self, debug_info_off: uint) -> Result<DebugInfoItem> {
         if !self.is_offset_in_data_section(debug_info_off) {
             return Err(Error::BadOffset(
                 debug_info_off as usize,

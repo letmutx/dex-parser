@@ -11,7 +11,7 @@ use crate::{
     int,
     jtype::{Type, TypeId},
     long,
-    method::{MethodHandleItem, MethodId, MethodIdItem, ProtoId, ProtoIdItem},
+    method::{MethodHandleId, MethodHandleItem, MethodId, MethodIdItem, ProtoId, ProtoIdItem},
     short,
     string::{DexString, StringId},
     ubyte, uint, ushort, Result,
@@ -363,7 +363,7 @@ where
             }
             ValueType::MethodHandle => {
                 debug_assert!(value_arg < 4);
-                let index: uint = try_extended_gread!(source, offset, value_arg, 4);
+                let index: MethodHandleId = try_extended_gread!(source, offset, value_arg, 4);
                 EncodedValue::MethodHandle(dex.get_method_handle_item(index)?)
             }
             ValueType::String => {

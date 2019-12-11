@@ -3,6 +3,8 @@
 // Silence warnings in error module for now
 #![allow(bare_trait_objects)]
 
+pub extern crate scroll;
+
 #[macro_use]
 extern crate scroll_derive;
 
@@ -13,8 +15,6 @@ extern crate bitflags;
 extern crate log;
 
 extern crate getset;
-
-use scroll;
 
 pub use error::Error;
 

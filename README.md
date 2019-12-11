@@ -9,7 +9,7 @@ Most of the functionality to access the data structures in the file is implement
 ## Usage
 Add to your `Cargo.toml`:
 ```
-dex = "0.3.1"
+dex = "0.4.0"
 ```
 
 ## Documentation

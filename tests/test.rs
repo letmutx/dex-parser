@@ -382,7 +382,6 @@ test!(
 
         let enum_field = find("enumField", "LDay;");
         assert!(enum_field.access_flags().is_empty());
-        
     }
 );
 
@@ -682,9 +681,7 @@ test!(
 
         let find = |name, params: &[&str], return_type: &str| {
             let method = class.methods().find(|m| {
-                m.name() == name && 
-                    m.params().iter().map(|s| s.type_descriptor()).eq(params.iter()) &&
-                    m.return_type() == return_type
+                m.name() == name && m.params().iter().map(|s| s.type_descriptor()).eq(params.iter()) && m.return_type() == return_type
             });
             assert!(method.is_some(), format!("method: {}, params: {:?}, return_type: {}", name, params, return_type));
             let method = method.unwrap();
@@ -753,7 +750,7 @@ test!(
         assert!(primitive_params_method.code().is_some());
         assert!(primitive_params_method.access_flags().is_empty());
         assert_eq!(primitive_params_method.shorty(), "ICSBIJZDF");
-        
+
         let class_params_method = find("classParams", &["Ljava/lang/String;", "Ljava/lang/String;"], "Ljava/lang/String;");
         assert!(class_params_method.code().is_some());
         assert!(class_params_method.access_flags().is_empty());
@@ -763,7 +760,7 @@ test!(
         assert!(enum_params_method.code().is_some());
         assert!(enum_params_method.access_flags().is_empty());
         assert_eq!(enum_params_method.shorty(), "VL");
-        
+
         let primitive_array_params_method = find("primitiveArrayParam", &["[J"], "V");
         assert!(primitive_array_params_method.code().is_some());
         assert!(primitive_array_params_method.access_flags().is_empty());

@@ -792,7 +792,7 @@ struct InstType {
 const INSTTYPES: [InstType; 256] = include!("insn.in");
 
 pub struct Inst<'a> {
-    pub bytes: &'a [u8],
+    bytes: &'a [u8],
 }
 
 macro_rules! table {

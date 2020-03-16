@@ -25,6 +25,7 @@ mod utils;
 pub mod annotation;
 mod cache;
 pub mod class;
+mod disass;
 pub mod code;
 mod dex;
 mod encoded_item;

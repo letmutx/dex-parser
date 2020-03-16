@@ -1,10 +1,13 @@
-use crate::ushort;
 use std::convert::TryInto;
+use std::fmt;
 
 mod opcodes;
 
+use crate::disass::opcodes::*;
+
+
 trait InstGetter {
-    fn length(&self) -> u32;
+    fn length(&self) -> usize;
     fn a(&self, data: &[u8]) -> u64;
     fn b(&self, data: &[u8]) -> u64;
     fn c(&self, data: &[u8]) -> u64;
@@ -49,7 +52,7 @@ fn read_8(data: &[u8]) -> u64 {
 }
 
 impl InstGetter for GetterOp00 {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         2
     }
 
@@ -87,7 +90,7 @@ impl InstGetter for GetterOp00 {
 }
 
 impl InstGetter for GetterOpAA {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         2
     }
 
@@ -125,7 +128,7 @@ impl InstGetter for GetterOpAA {
 }
 
 impl InstGetter for Getter10t {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         2
     }
 
@@ -163,7 +166,7 @@ impl InstGetter for Getter10t {
 }
 
 impl InstGetter for GetterOpBA {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         2
     }
 
@@ -201,7 +204,7 @@ impl InstGetter for GetterOpBA {
 }
 
 impl InstGetter for GetterOp00AAAA {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         4
     }
 
@@ -239,7 +242,7 @@ impl InstGetter for GetterOp00AAAA {
 }
 
 impl InstGetter for Getter20t {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         4
     }
 
@@ -277,7 +280,7 @@ impl InstGetter for Getter20t {
 }
 
 impl InstGetter for GetterOpAABBBB {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         4
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -314,7 +317,7 @@ impl InstGetter for GetterOpAABBBB {
 }
 
 impl InstGetter for GetterOpAACCBB {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         4
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -351,7 +354,7 @@ impl InstGetter for GetterOpAACCBB {
 }
 
 impl InstGetter for Getter21t {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         4
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -387,7 +390,7 @@ impl InstGetter for Getter21t {
 }
 
 impl InstGetter for GetterOpBACCCC {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         4
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -421,7 +424,7 @@ impl InstGetter for GetterOpBACCCC {
 }
 
 impl InstGetter for Getter22t {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         4
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -455,7 +458,7 @@ impl InstGetter for Getter22t {
 }
 
 impl InstGetter for Getter30t {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         6
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -491,7 +494,7 @@ impl InstGetter for Getter30t {
 }
 
 impl InstGetter for GetterOp00AAAAAAAA {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         6
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -527,7 +530,7 @@ impl InstGetter for GetterOp00AAAAAAAA {
 }
 
 impl InstGetter for GetterOp00AAAABBBB {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         6
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -562,7 +565,7 @@ impl InstGetter for GetterOp00AAAABBBB {
 }
 
 impl InstGetter for GetterOpAABBBBBBBB {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         6
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -597,7 +600,7 @@ impl InstGetter for GetterOpAABBBBBBBB {
 }
 
 impl InstGetter for GetterOpAABBBBCCCC {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         6
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -631,7 +634,7 @@ impl InstGetter for GetterOpAABBBBCCCC {
 }
 
 impl InstGetter for GetterOpAGBBBBDCFE {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         6
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -661,7 +664,7 @@ impl InstGetter for GetterOpAGBBBBDCFE {
 }
 
 impl InstGetter for GetterOpAABBBBCCCCHHHH {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         8
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -694,7 +697,7 @@ impl InstGetter for GetterOpAABBBBCCCCHHHH {
 }
 
 impl InstGetter for GetterOpAGBBBBDCFEHHHH {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         8
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -724,7 +727,7 @@ impl InstGetter for GetterOpAGBBBBDCFEHHHH {
 }
 
 impl InstGetter for GetterOpAABBBBBBBBBBBBBBBB {
-    fn length(&self) -> u32 {
+    fn length(&self) -> usize {
         10
     }
     fn a(&self, data: &[u8]) -> u64 {
@@ -964,7 +967,7 @@ pub struct InstIterator<'a> {
 }
 
 impl InstIterator<'_> {
-    fn new(bytes: &[u8], length: usize) -> InstIterator {
+    pub fn new(bytes: &[u8], length: usize) -> InstIterator {
         InstIterator {
             bytes: bytes,
             index: 0,

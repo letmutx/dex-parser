@@ -963,7 +963,6 @@ pub struct InstIterator<'a> {
     pub bytes: &'a [u8],
     index: usize,
     length: usize,
-    current_inst: Inst<'a>,
 }
 
 impl InstIterator<'_> {
@@ -972,7 +971,6 @@ impl InstIterator<'_> {
             bytes: bytes,
             index: 0,
             length: length,
-            current_inst: Inst { bytes: bytes },
         }
     }
 }

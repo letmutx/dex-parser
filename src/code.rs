@@ -5,8 +5,8 @@ use std::{fmt, ops::Deref};
 use getset::{CopyGetters, Getters};
 
 use crate::{
-    encoded_item::EncodedCatchHandlers, error::Error, jtype::Type, string::DexString, uint, ulong,
-    ushort,
+    disass::Inst, encoded_item::EncodedCatchHandlers, error::Error, jtype::Type, string::DexString,
+    uint, ulong, ushort,
 };
 
 /// Debug Info of a method.
@@ -47,6 +47,11 @@ impl CodeItem {
     /// Line number and source file information.
     pub fn debug_info_item(&self) -> Option<&DebugInfoItem> {
         self.debug_info_item.as_ref()
+    }
+
+    pub fn disassemble(&self) -> InstIterator {
+        let (_, data, _) = unsafe { (&self.insns()).align_to::<u8>() };
+        InstIterator::new(data, self.insns().len() * 2)
     }
 }
 

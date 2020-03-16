@@ -19,7 +19,7 @@ trait InstGetter {
 }
 
 fn _b(data: &[u8], n: usize) -> u64 {
-    (data[n] << (n * 8)).into()
+    (data[n] as u64) << (n * 8)
 }
 
 fn read_l(data: &[u8]) -> u64 {
@@ -49,6 +49,35 @@ fn read_8(data: &[u8]) -> u64 {
         + _b(data, 5)
         + _b(data, 6)
         + _b(data, 7)
+}
+
+
+#[cfg(test)]
+mod test_read_functions {
+    use super::{_b, read_l, read_h, read_2, read_4, read_8};
+
+    #[test]
+    fn test_b() {
+        let buf = [1, 2, 3];
+        assert_eq!(_b(&buf, 0), 1);
+        assert_eq!(_b(&buf, 1), 2 << 8);
+        assert_eq!(_b(&buf, 2), 3 << 16);
+    }
+
+    #[test]
+    fn test_read_l_and_read_h() {
+        let buf = [0xab, 2];
+        assert_eq!(read_l(&buf), 0xb);
+        assert_eq!(read_h(&buf), 0xa);
+    }
+
+    #[test]
+    fn test_read_n() {
+        let buf = [0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9];
+        assert_eq!(read_2(&buf), 0xf2f1);
+        assert_eq!(read_4(&buf), 0xf4f3f2f1);
+        assert_eq!(read_8(&buf), 0xf8f7f6f5f4f3f2f1);
+    }
 }
 
 impl InstGetter for GetterOp00 {
@@ -876,54 +905,54 @@ impl Inst<'_> {
     }
 
    pub fn is_const(&self) -> bool {
-        Const4 <= self.op() && self.op() <= ConstClass
+        CONST4 <= self.op() && self.op() <= CONSTCLASS
     }
 
     pub fn is_const_string(&self) -> bool {
-        self.op() == ConstString || self.op() == ConstStringJumbo
+        self.op() == CONSTSTRING || self.op() == CONSTSTRINGJUMBO
     }
 
     pub fn is_invoke(&self) -> bool {
-        if InvokeVirtual <= self.op() && self.op() <= InvokeInterface {
+        if INVOKEVIRTUAL <= self.op() && self.op() <= INVOKEINTERFACE {
             return true;
         }
-        if InvokeVirtual_range <= self.op() && self.op() <= InvokeInterface_range {
+        if INVOKEVIRTUAL_RANGE <= self.op() && self.op() <= INVOKEINTERFACE_RANGE {
             return true;
         }
-        if self.op() == InvokePolymorphic || self.op() == InvokePolymorphic_range {
+        if self.op() == INVOKEPOLYMORPHIC || self.op() == INVOKEPOLYMORPHIC_RANGE {
             return true;
         }
         return false;
     }
 
     pub fn is_read_field(&self) -> bool {
-        if Iget <= self.op() && self.op() <= IgetShort {
+        if IGET <= self.op() && self.op() <= IGETSHORT {
             return true;
         }
-        if Sget <= self.op() && self.op() <= SgetShort {
+        if SGET <= self.op() && self.op() <= SGETSHORT {
             return true;
         }
         return false;
     }
 
     pub fn is_return(&self) -> bool {
-        ReturnVoid <= self.op() && self.op() <= ReturnObject
+        RETURNVOID <= self.op() && self.op() <= RETURNOBJECT
     }
 
     pub fn is_throw(&self) -> bool {
-        self.op() == Throw
+        self.op() == THROW
     }
 
     pub fn is_goto(&self) -> bool {
-        Goto <= self.op() && self.op() <= Goto_32
+        GOTO <= self.op() && self.op() <= GOTO_32
     }
 
     pub fn is_branch(&self) -> bool {
-        IfEq <= self.op() && self.op() <= IfLez
+        IFEQ <= self.op() && self.op() <= IFLEZ
     }
 
     pub fn is_switch(&self) -> bool {
-        self.op() == PackedSwitch || self.op() == SparseSwitch
+        self.op() == PACKEDSWITCH || self.op() == SPARSESWITCH
     }
 
     pub fn string_idx(&self) -> i32 {
@@ -935,7 +964,7 @@ impl Inst<'_> {
     }
 
     pub fn field(&self) -> i32 {
-        if self.op() < Sget {
+        if self.op() < SGET {
             self.get_c().try_into().unwrap()
         } else {
             self.get_b().try_into().unwrap()
@@ -991,4 +1020,16 @@ impl<'a> Iterator for InstIterator<'a> {
     }
 }
 
+#[cfg(test)]
+mod test_inst {
+    use super::{Inst, InstIterator};
 
+    #[test]
+    fn test_op() {
+        let buf = [0, 0];
+        let i = Inst { bytes: &buf };
+        assert_eq!(i.op(), buf[0] as usize);
+    }
+
+
+}

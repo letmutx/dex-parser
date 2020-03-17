@@ -255,4 +255,4 @@
   InstType { mnemonic: "invoke_custom/range", get: &GetterOpAABBBBCCCC {}, syntax: "{vC .. vN}, call_site@B" },
   InstType { mnemonic: "const_method_handle", get: &GetterOpAABBBB {}, syntax: "vA, method_handle@B" },
   InstType { mnemonic: "const_method_type", get: &GetterOpAABBBB {}, syntax: "vA, proto@B" },
-];
+]

@@ -5,8 +5,8 @@ use std::{fmt, ops::Deref};
 use getset::{CopyGetters, Getters};
 
 use crate::{
-    disass::InstIterator, encoded_item::EncodedCatchHandlers, error::Error, jtype::Type, string::DexString,
-    uint, ulong, ushort,
+    disass::InstIterator, encoded_item::EncodedCatchHandlers, error::Error, jtype::Type,
+    string::DexString, uint, ulong, ushort,
 };
 
 /// Debug Info of a method.

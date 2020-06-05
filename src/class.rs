@@ -185,7 +185,7 @@ impl Class {
             .unwrap_or_else(|| Ok::<_, Error>(Default::default()))?;
 
         debug!(target: "class", "super class id: {}", class_def.superclass_idx);
-        let super_class = if class_def.superclass_idx == super::NO_INDEX {
+        let super_class = if class_def.superclass_idx != super::NO_INDEX {
             Some(class_def.superclass_idx)
         } else {
             None

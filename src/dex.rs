@@ -95,7 +95,7 @@ pub struct Header {
 
 impl Header {
     fn data_section(&self) -> Range<uint> {
-        (self.data_off..self.data_off + self.data_size)
+        self.data_off..self.data_off + self.data_size
     }
 }
 

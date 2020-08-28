@@ -774,10 +774,10 @@ impl DexReader {
     }
 
     /// Loads a `Dex` from a `Vec<u8>`
-    pub fn from_vec(vec: Vec<u8>) -> Result<Dex<Vec<u8>>> {
-        let inner: DexInner = vec.pread(0)?;
+    pub fn from_vec<B: AsRef<[u8]>>(buf: B) -> Result<Dex<B>> {
+        let inner: DexInner = buf.as_ref().pread(0)?;
         let endian = inner.endian();
-        let source = Source::new(vec);
+        let source = Source::new(buf);
         let cache = Strings::new(
             source.clone(),
             endian,

@@ -50,6 +50,9 @@ pub struct Field {
     /// Annotations of the field.
     #[get = "pub"]
     annotations: AnnotationSetItem,
+    /// `FieldId` of the field.
+    #[get = "pub"]
+    id: FieldId,
 }
 
 impl Field {
@@ -96,6 +99,7 @@ impl Field {
             })?,
             initial_value,
             annotations,
+            id: encoded_field.field_id,
         })
     }
 }

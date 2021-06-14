@@ -65,6 +65,9 @@ pub struct Method {
     /// Annotations of the params.
     #[get = "pub"]
     param_annotations: AnnotationSetRefList,
+    /// `MethodId` of the method.
+    #[get = "pub"]
+    id: MethodId,
 }
 
 impl Method {
@@ -172,6 +175,7 @@ impl Method {
             code,
             annotations,
             param_annotations,
+            id: encoded_method.method_id,
         })
     }
 }

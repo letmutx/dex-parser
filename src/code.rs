@@ -6,7 +6,7 @@ use getset::{CopyGetters, Getters};
 
 use crate::{
     encoded_item::EncodedCatchHandlers, error::Error, jtype::Type, string::DexString, uint, ulong,
-    ushort,
+    ushort, int,
 };
 
 /// Debug Info of a method.
@@ -230,6 +230,100 @@ where
                 outs_size,
                 insns,
                 tries,
+            },
+            *offset,
+        ))
+    }
+}
+
+/// Represents a packed switch payload.
+#[derive(Debug, Getters, CopyGetters)]
+pub struct PackedSwitchPayload {
+    /// First (and lowest) switch case value.
+    #[get_copy = "pub"]
+    first_key: int,
+    /// List of size relative branch targets. The targets are relative to the
+    /// address of the switch opcode, not of this table.
+    #[get = "pub"]
+    targets: Vec<int>,
+}
+
+/// Represents a sparse switch payload.
+#[derive(Debug, Getters, CopyGetters)]
+pub struct SparseSwitchPayload {
+    /// List of size key values, sorted low-to-high.
+    #[get = "pub"]
+    keys: Vec<int>,
+    /// List of size relative branch targets, each corresponding to the key
+    /// value at the same index. The targets are relative to the address of
+    /// the switch opcode, not of this table.
+    #[get = "pub"]
+    targets: Vec<int>,
+}
+
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for PackedSwitchPayload
+where
+    S: AsRef<[u8]>,
+{
+    type Error = Error;
+    type Size = usize;
+
+    fn try_from_ctx(
+        source: &'a [u8],
+        dex: &super::Dex<S>,
+    ) -> Result<(Self, Self::Size), Self::Error> {
+        let offset = &mut 0;
+        let endian = dex.get_endian();
+        let ident: ushort = source.gread_with(offset, endian)?;
+        if ident != 0x0100 {
+            return Err(Error::InvalidId(format!("Invalid packed switch pseudo-opcode: {}", ident)));
+        }
+        let size: ushort = source.gread_with(offset, endian)?;
+        let first_key: int = source.gread_with(offset, endian)?;
+        let mut targets = Vec::with_capacity(size as usize);
+        for _ in 0..size as usize {
+            targets.push(source.gread_with(offset, endian)?);
+        }
+        Ok((
+            Self {
+                first_key,
+                targets,
+            },
+            *offset,
+        ))
+    }
+}
+
+impl<'a, S> ctx::TryFromCtx<'a, &super::Dex<S>> for SparseSwitchPayload
+where
+    S: AsRef<[u8]>,
+{
+    type Error = Error;
+    type Size = usize;
+
+    fn try_from_ctx(
+        source: &'a [u8],
+        dex: &super::Dex<S>,
+    ) -> Result<(Self, Self::Size), Self::Error> {
+        let offset = &mut 0;
+        let endian = dex.get_endian();
+        let ident: ushort = source.gread_with(offset, endian)?;
+        if ident != 0x0200 {
+            return Err(Error::InvalidId(format!("Invalid sparse switch pseudo-opcode: {}", ident)));
+        }
+        let size: ushort = source.gread_with(offset, endian)?;
+        let mut keys = Vec::with_capacity(size as usize);
+        for _ in 0..size as usize {
+            keys.push(source.gread_with(offset, endian)?);
+        }
+        let mut targets = Vec::with_capacity(size as usize);
+        for _ in 0..size as usize {
+            targets.push(source.gread_with(offset, endian)?);
+        }
+        Ok((
+            Self {
+                keys,
+                targets,
             },
             *offset,
         ))

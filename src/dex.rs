@@ -13,7 +13,7 @@ use crate::{
         AnnotationItem, AnnotationSetItem, AnnotationSetRefList, AnnotationsDirectoryItem,
     },
     class::{Class, ClassDataItem, ClassDefItem, ClassDefItemIter},
-    code::{CodeItem, DebugInfoItem},
+    code::{CodeItem, DebugInfoItem, PackedSwitchPayload, SparseSwitchPayload},
     encoded_value::{EncodedArray, EncodedValue},
     error::{self, Error},
     field::{EncodedField, Field, FieldId, FieldIdItem},
@@ -744,6 +744,16 @@ where
         }
 
         Ok(self.source.pread_with(debug_info_off as usize, self)?)
+    }
+
+    /// Returns the `PackedSwitchPayload` at the offset.
+    pub fn get_packed_switch_payload(&self, packed_switch_off: uint) -> Result<PackedSwitchPayload> {
+        Ok(self.source.pread_with(packed_switch_off as usize, self)?)
+    }
+
+    /// Returns the `SparseSwitchPayload` at the offset.
+    pub fn get_sparse_switch_payload(&self, sparse_switch_off: uint) -> Result<SparseSwitchPayload> {
+        Ok(self.source.pread_with(sparse_switch_off as usize, self)?)
     }
 }
 

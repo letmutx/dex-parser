@@ -66,7 +66,7 @@ pub struct Method {
     #[get = "pub"]
     param_annotations: AnnotationSetRefList,
     /// `MethodId` of the method.
-    #[get = "pub"]
+    #[get_copy = "pub"]
     id: MethodId,
 }
 

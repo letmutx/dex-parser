@@ -51,7 +51,7 @@ pub struct Field {
     #[get = "pub"]
     annotations: AnnotationSetItem,
     /// `FieldId` of the field.
-    #[get = "pub"]
+    #[get_copy = "pub"]
     id: FieldId,
 }
 
@@ -116,8 +116,8 @@ struct FieldIdData {
 
 /// Defines a `Field`
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-id-item)
-#[derive(Debug, Getters, PartialEq)]
-#[get = "pub"]
+#[derive(Debug, CopyGetters, PartialEq)]
+#[get_copy = "pub"]
 pub struct FieldIdItem {
     /// Index into `TypeId`s list which contains the defining class's `Type`.
     class_idx: ushort,

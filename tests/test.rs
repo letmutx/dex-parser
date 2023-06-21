@@ -5,6 +5,8 @@ use std::{
 };
 
 use tempfile::TempDir;
+use dex::field::FieldId;
+use dex::method::MethodId;
 
 struct TestBuilder {
     root: TempDir,
@@ -325,63 +327,86 @@ test!(
         assert_eq!(class.instance_fields().len(), 14);
         let find = |name, jtype| {
             let field = class.fields().find(|f| f.name() == name);
-            assert!(field.is_some(), format!("name: {}, type: {}", name, jtype));
+            assert!(field.is_some(), "name: {}, type: {}", name, jtype);
             let field = field.unwrap();
             assert_eq!(field.jtype(), jtype);
             field
         };
+
+        let find_id_item = |id: FieldId| {
+            dex.field_ids().find(|f| if let Ok(f) = f {
+                f.id() == id
+            } else {
+                false
+            })
+        };
+
         let boolean = find("booleanVar", "Z");
         assert!(boolean.jtype().is_bool());
+        assert!(find_id_item(boolean.id()).is_some());
 
         let char_var = find("charVar", "C");
         assert!(char_var.jtype().is_char());
+        assert!(find_id_item(char_var.id()).is_some());
 
         let short = find("shortVar", "S");
         assert!(short.jtype().is_short());
+        assert!(find_id_item(short.id()).is_some());
 
         let float = find("floatVar", "F");
         assert!(float.jtype().is_float());
+        assert!(find_id_item(float.id()).is_some());
 
         let long = find("longVar", "J");
         assert!(long.jtype().is_long());
+        assert!(find_id_item(long.id()).is_some());
 
         let static_field = find("staticVar", "I");
         assert!(!static_field.jtype().is_reference());
         assert!(static_field.jtype().is_int());
         assert_has_access_flags!(static_field, [is_static, is_public]);
+        assert!(find_id_item(static_field.id()).is_some());
 
         let final_field = find("finalVar", "D");
         assert!(!final_field.jtype().is_reference());
         assert!(final_field.jtype().is_double());
         assert_has_access_flags!(final_field, [is_final]);
+        assert!(find_id_item(final_field.id()).is_some());
 
         let protected_field = find("protectedField", "Ljava/lang/String;");
         assert!(protected_field.jtype().is_reference());
         assert!(protected_field.jtype().is_class());
         assert_has_access_flags!(protected_field, [is_protected]);
+        assert!(find_id_item(protected_field.id()).is_some());
 
         let private_field = find("privateField", "Ljava/lang/String;");
         assert_has_access_flags!(private_field, [is_private]);
+        assert!(find_id_item(private_field.id()).is_some());
 
         let public_field = find("publicField", "Ljava/lang/String;");
         assert_has_access_flags!(public_field, [is_public]);
+        assert!(find_id_item(public_field.id()).is_some());
 
         let array_field = find("arrayField", "[I");
         assert!(array_field.jtype().is_array());
         assert_eq!(array_field.jtype().array_dimensions(), Some(1));
         assert!(array_field.jtype().is_reference());
         assert!(array_field.access_flags().is_empty());
+        assert!(find_id_item(array_field.id()).is_some());
 
         let generic_field = find("genericField", "Ljava/lang/Object;");
         assert!(generic_field.jtype().is_reference());
         assert_eq!(generic_field.jtype().array_dimensions(), None);
         assert!(generic_field.access_flags().is_empty());
+        assert!(find_id_item(generic_field.id()).is_some());
 
         let generic_field = find("genericField2", "LMain;");
         assert!(generic_field.access_flags().is_empty());
+        assert!(find_id_item(generic_field.id()).is_some());
 
         let enum_field = find("enumField", "LDay;");
         assert!(enum_field.access_flags().is_empty());
+        assert!(find_id_item(enum_field.id()).is_some());
         
     }
 );
@@ -489,7 +514,7 @@ test!(
         let validate_interface_methods = |interface: &Class| {
             interface.methods().for_each(|m| {
                 assert_has_access_flags!(m, [is_public, is_abstract], format!("interface method: {} doesn't have all attributes", m.name()));
-                assert!(m.code().is_none(), format!("interface method: {} shouldn't have code item", m.name()));
+                assert!(m.code().is_none(), "interface method: {} shouldn't have code item", m.name());
             });
         };
         let validate_interface_fields = |interface: &Class| {
@@ -686,141 +711,174 @@ test!(
                     m.params().iter().map(|s| s.type_descriptor()).eq(params.iter()) &&
                     m.return_type() == return_type
             });
-            assert!(method.is_some(), format!("method: {}, params: {:?}, return_type: {}", name, params, return_type));
+            assert!(method.is_some(), "method: {}, params: {:?}, return_type: {}", name, params, return_type);
             let method = method.unwrap();
             method
+        };
+
+        let find_id_item = |id: MethodId| {
+            dex.method_ids().find(|m| if let Ok(m) = m {
+                m.id() == id
+            } else {
+                false
+            })
         };
 
         let default_method = find("defaultMethod", &[], "V");
         assert!(default_method.code().is_some());
         assert!(default_method.access_flags().is_empty());
         assert_eq!(default_method.shorty(), "V");
+        assert!(find_id_item(default_method.id()).is_some());
 
         let final_method = find("finalMethod", &[], "V");
         assert!(final_method.code().is_some());
         assert_has_access_flags!(final_method, [is_final]);
         assert_eq!(final_method.shorty(), "V");
+        assert!(find_id_item(final_method.id()).is_some());
 
         let static_method = find("staticMethod", &[], "V");
         assert!(static_method.code().is_some());
         assert_has_access_flags!(static_method, [is_static]);
         assert_eq!(static_method.shorty(), "V");
+        assert!(find_id_item(static_method.id()).is_some());
 
         let public_method = find("publicMethod", &[], "V");
         assert!(public_method.code().is_some());
         assert_has_access_flags!(public_method, [is_public]);
         assert_eq!(public_method.shorty(), "V");
+        assert!(find_id_item(public_method.id()).is_some());
 
         let private_method = find("privateMethod", &[], "V");
         assert!(private_method.code().is_some());
         assert_has_access_flags!(private_method, [is_private]);
         assert_eq!(private_method.shorty(), "V");
+        assert!(find_id_item(private_method.id()).is_some());
 
         let protected_method = find("protectedMethod", &[], "V");
         assert!(protected_method.code().is_some());
         assert_has_access_flags!(protected_method, [is_protected]);
         assert_eq!(protected_method.shorty(), "V");
+        assert!(find_id_item(protected_method.id()).is_some());
 
 
         let primitive_return_method = find("primitiveReturnMethod", &[], "I");
         assert!(primitive_return_method.code().is_some());
         assert!(primitive_return_method.access_flags().is_empty());
         assert_eq!(primitive_return_method.shorty(), "I");
+        assert!(find_id_item(primitive_return_method.id()).is_some());
 
         let class_return_method = find("classReturnMethod", &[], "Ljava/lang/String;");
         assert!(primitive_return_method.code().is_some());
         assert!(class_return_method.access_flags().is_empty());
         assert_eq!(class_return_method.shorty(), "L");
+        assert!(find_id_item(class_return_method.id()).is_some());
 
         let array_return_method = find("arrayReturnMethod", &[], "[J");
         assert!(array_return_method.code().is_some());
         assert!(array_return_method.access_flags().is_empty());
         assert_eq!(array_return_method.shorty(), "L");
+        assert!(find_id_item(array_return_method.id()).is_some());
 
         let object_array_return_method = find("objectArrayReturnMethod", &[], "[Ljava/lang/String;");
         assert!(object_array_return_method.code().is_some());
         assert!(array_return_method.access_flags().is_empty());
         assert!(object_array_return_method.access_flags().is_empty());
         assert_eq!(object_array_return_method.shorty(), "L");
+        assert!(find_id_item(object_array_return_method.id()).is_some());
 
         let enum_return_method = find("enumReturnMethod", &[], "LDay;");
         assert!(enum_return_method.code().is_some());
         assert!(enum_return_method.access_flags().is_empty());
         assert_eq!(enum_return_method.shorty(), "L");
+        assert!(find_id_item(enum_return_method.id()).is_some());
 
 
         let primitive_params_method = find("primitiveParams", &["C", "S", "B", "I", "J", "Z", "D", "F"], "I");
         assert!(primitive_params_method.code().is_some());
         assert!(primitive_params_method.access_flags().is_empty());
         assert_eq!(primitive_params_method.shorty(), "ICSBIJZDF");
+        assert!(find_id_item(primitive_params_method.id()).is_some());
         
         let class_params_method = find("classParams", &["Ljava/lang/String;", "Ljava/lang/String;"], "Ljava/lang/String;");
         assert!(class_params_method.code().is_some());
         assert!(class_params_method.access_flags().is_empty());
         assert_eq!(class_params_method.shorty(), "LLL");
+        assert!(find_id_item(class_params_method.id()).is_some());
 
         let enum_params_method = find("enumParam", &["LDay;"], "V");
         assert!(enum_params_method.code().is_some());
         assert!(enum_params_method.access_flags().is_empty());
         assert_eq!(enum_params_method.shorty(), "VL");
+        assert!(find_id_item(enum_params_method.id()).is_some());
         
         let primitive_array_params_method = find("primitiveArrayParam", &["[J"], "V");
         assert!(primitive_array_params_method.code().is_some());
         assert!(primitive_array_params_method.access_flags().is_empty());
         assert_eq!(primitive_array_params_method.shorty(), "VL");
+        assert!(find_id_item(primitive_array_params_method.id()).is_some());
 
         let object_array_params_method = find("objectArrayParam", &["[Ljava/lang/String;"], "V");
         assert!(object_array_params_method.code().is_some());
         assert!(object_array_params_method.access_flags().is_empty());
         assert_eq!(object_array_params_method.shorty(), "VL");
+        assert!(find_id_item(object_array_params_method.id()).is_some());
 
         let interface_params_method = find("interfaceParam", &["LMyInterface;"], "V");
         assert!(interface_params_method.code().is_some());
         assert!(interface_params_method.access_flags().is_empty());
         assert_eq!(interface_params_method.shorty(), "VL");
+        assert!(find_id_item(interface_params_method.id()).is_some());
 
         let generic_params_method  = find("genericParamsMethod1", &["Ljava/util/List;", "I"], "V");
         assert!(generic_params_method.code().is_some());
         assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
+        assert!(find_id_item(generic_params_method.id()).is_some());
 
         let generic_params_method  = find("genericParamsMethod2", &["Ljava/lang/Object;", "I"], "V");
         assert!(generic_params_method.code().is_some());
         assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
+        assert!(find_id_item(generic_params_method.id()).is_some());
 
         let generic_params_method  = find("genericParamsMethod3", &["Ljava/util/List;", "I"], "V");
         assert!(generic_params_method.code().is_some());
         assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
+        assert!(find_id_item(generic_params_method.id()).is_some());
 
         let generic_params_method  = find("genericParamsMethod4", &["Ljava/util/List;", "I"], "V");
         assert!(generic_params_method.code().is_some());
         assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VLI");
+        assert!(find_id_item(generic_params_method.id()).is_some());
 
 
         let generic_params_method  = find("genericParamWithExtendsClauseMethod", &["LSuperClass;"], "V");
         assert!(generic_params_method.code().is_some());
         assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VL");
+        assert!(find_id_item(generic_params_method.id()).is_some());
 
         let generic_params_method  = find("genericParamWithMultipleExtendsClauseMethod", &["LSuperClass;"], "V");
         assert!(generic_params_method.code().is_some());
         assert_has_access_flags!(generic_params_method, [is_private]);
         assert_eq!(generic_params_method.shorty(), "VL");
+        assert!(find_id_item(generic_params_method.id()).is_some());
 
 
         let varargs_method = find("varargsMethod", &["[Ljava/lang/String;"], "I");
         assert!(varargs_method.code().is_some());
         assert_has_access_flags!(varargs_method, [is_public, is_varargs]);
         assert_eq!(varargs_method.shorty(), "IL");
+        assert!(find_id_item(varargs_method.id()).is_some());
 
 
         let super_method = find("superMethod", &["Ljava/lang/String;"], "I");
         assert!(super_method.code().is_some());
         assert!(super_method.access_flags().is_empty());
         assert_eq!(super_method.shorty(), "IL");
+        assert!(find_id_item(super_method.id()).is_some());
 
         let super_method2 = class.fields().find(|m| m.name() == "superMethod2");
         assert!(super_method2.is_none(), "super method 2 is not overriden, so it shouldn't be there");
@@ -830,22 +888,26 @@ test!(
         assert!(interface_method.code().is_some());
         assert_has_access_flags!(interface_method, [is_public]);
         assert_eq!(interface_method.shorty(), "LIL");
+        assert!(find_id_item(interface_method.id()).is_some());
 
 
         let native_method = find("nativeMethod", &["I", "Ljava/lang/String;"], "Ljava/lang/String;");
         assert!(native_method.code().is_none());
         assert_has_access_flags!(native_method, [is_public, is_native]);
         assert_eq!(native_method.shorty(), "LIL");
+        assert!(find_id_item(native_method.id()).is_some());
 
         let abstract_method = find("abstractMethod", &["I"], "I");
         assert!(abstract_method.code().is_none());
         assert_has_access_flags!(abstract_method, [is_abstract]);
         assert_eq!(abstract_method.shorty(), "II");
+        assert!(find_id_item(abstract_method.id()).is_some());
 
         let synchronized_method = find("synchronizedMethod", &["I"], "I");
         assert!(synchronized_method.code().is_some());
         assert_has_access_flags!(synchronized_method, [is_declared_synchronized]);
         assert_eq!(synchronized_method.shorty(), "II");
+        assert!(find_id_item(synchronized_method.id()).is_some());
     }
 );
 

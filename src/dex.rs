@@ -491,7 +491,7 @@ where
                 field_id
             )));
         }
-        FieldIdItem::try_from_dex(self, offset)
+        FieldIdItem::try_from_dex(self, offset, field_id)
     }
 
     /// Returns the `ProtoIdItem` represented by `ProtoId`.
@@ -523,7 +523,7 @@ where
                 method_id
             )));
         }
-        MethodIdItem::try_from_dex(self, offset)
+        MethodIdItem::try_from_dex(self, offset, method_id)
     }
 
     /// Iterator over the strings

@@ -66,7 +66,7 @@ pub struct Method {
     #[get = "pub"]
     param_annotations: AnnotationSetRefList,
     /// `MethodId` of the method.
-    #[get = "pub"]
+    #[get_copy = "pub"]
     id: MethodId,
 }
 
@@ -180,9 +180,16 @@ impl Method {
     }
 }
 
+#[derive(Pread)]
+struct MethodIdData {
+    class_idx: ushort,
+    proto_idx: ushort,
+    name_idx: StringId,
+}
+
 /// Method identifier.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#method-id-item)
-#[derive(Pread, Debug, CopyGetters, PartialEq)]
+#[derive(Debug, CopyGetters, PartialEq)]
 #[get_copy = "pub"]
 pub struct MethodIdItem {
     /// Index into the `TypeId`s list for the definer of this method.
@@ -191,15 +198,24 @@ pub struct MethodIdItem {
     proto_idx: ushort,
     /// Index into the `StringId`s list for the name of this method.
     name_idx: StringId,
+    /// `MethodId` of this method.
+    id: MethodId,
 }
 
 impl MethodIdItem {
     pub(crate) fn try_from_dex<S: AsRef<[u8]>>(
         dex: &super::Dex<S>,
         offset: ulong,
+        method_id: MethodId,
     ) -> super::Result<Self> {
         let source = &dex.source;
-        Ok(source.pread_with(offset as usize, dex.get_endian())?)
+        let method: MethodIdData = source.pread_with(offset as usize, dex.get_endian())?;
+        Ok(MethodIdItem {
+            class_idx: method.class_idx,
+            proto_idx: method.proto_idx,
+            name_idx: method.name_idx,
+            id: method_id,
+        })
     }
 }
 

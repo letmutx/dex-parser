@@ -51,7 +51,7 @@ pub struct Field {
     #[get = "pub"]
     annotations: AnnotationSetItem,
     /// `FieldId` of the field.
-    #[get = "pub"]
+    #[get_copy = "pub"]
     id: FieldId,
 }
 
@@ -107,10 +107,17 @@ impl Field {
 /// List of `EncodedField`s
 pub type EncodedFieldArray = EncodedItemArray<EncodedField>;
 
+#[derive(Pread)]
+struct FieldIdData {
+    class_idx: ushort,
+    type_idx: ushort,
+    name_idx: StringId,
+}
+
 /// Defines a `Field`
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#field-id-item)
-#[derive(Pread, Debug, Getters, PartialEq)]
-#[get = "pub"]
+#[derive(Debug, CopyGetters, PartialEq)]
+#[get_copy = "pub"]
 pub struct FieldIdItem {
     /// Index into `TypeId`s list which contains the defining class's `Type`.
     class_idx: ushort,
@@ -118,15 +125,24 @@ pub struct FieldIdItem {
     type_idx: ushort,
     /// Index into `StringId`s list which contains the name of the field.
     name_idx: StringId,
+    /// `FieldId` of this field.
+    id: FieldId,
 }
 
 impl FieldIdItem {
     pub(crate) fn try_from_dex<T: AsRef<[u8]>>(
         dex: &super::Dex<T>,
         offset: ulong,
+        field_id: FieldId,
     ) -> super::Result<Self> {
         let source = &dex.source;
-        Ok(source.pread_with(offset as usize, dex.get_endian())?)
+        let field: FieldIdData = source.pread_with(offset as usize, dex.get_endian())?;
+        Ok(FieldIdItem {
+            class_idx: field.class_idx,
+            type_idx: field.type_idx,
+            name_idx: field.name_idx,
+            id: field_id,
+        })
     }
 }
 

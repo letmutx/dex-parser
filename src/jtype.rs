@@ -21,6 +21,8 @@ pub const LONG: &'static str = "J";
 pub const FLOAT: &'static str = "F";
 /// Dex representation of a double type
 pub const DOUBLE: &'static str = "D";
+/// Dex representation of a void type
+pub const VOID: &'static str = "V";
 
 /// Offset into the `TypeId`s section.
 pub type TypeId = uint;
@@ -56,6 +58,7 @@ impl Type {
             || self.is_long()
             || self.is_float()
             || self.is_double()
+            || self.is_void()
     }
 
     /// Returns `true` if the type is an array or a class
@@ -101,6 +104,7 @@ impl Type {
     gen_is_type_method!(is_long, LONG, "Returns `true` if the type is a long");
     gen_is_type_method!(is_float, FLOAT, "Returns `true` if the type is a float");
     gen_is_type_method!(is_double, DOUBLE, "Returns `true` if the type is a double");
+    gen_is_type_method!(is_void, VOID, "Returns `true` if the type is void");
 }
 
 fn to_java_type(s: &str) -> String {
@@ -113,6 +117,7 @@ fn to_java_type(s: &str) -> String {
         LONG => "long".to_string(),
         FLOAT => "float".to_string(),
         DOUBLE => "double".to_string(),
+        VOID => "void".to_string(),
         s if s.starts_with('L') => s[1..].replace('/', ".").replace(';', ""),
         s if s.starts_with('[') => {
             let d = s.chars().take_while(|c| *c == '[').count();
@@ -176,6 +181,7 @@ mod tests {
         assert_eq!(to_java_type(super::LONG), "long");
         assert_eq!(to_java_type(super::FLOAT), "float");
         assert_eq!(to_java_type(super::DOUBLE), "double");
+        assert_eq!(to_java_type(super::VOID), "void");
         assert_eq!(to_java_type("Ljava/lang/String;"), "java.lang.String");
         assert_eq!(to_java_type("[Ljava/lang/String;"), "java.lang.String[]");
         assert_eq!(to_java_type("[[Ljava/lang/String;"), "java.lang.String[][]");

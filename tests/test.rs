@@ -911,6 +911,67 @@ test!(
     }
 );
 
+test!(
+    test_builtin_types,
+    {
+        "BuiltInTypes.java" => r#"
+            public class BuiltInTypes {
+               boolean returnsBoolean() { return false; }
+               byte returnsByte() { return 0; }
+               short returnsShort() { return 0; }
+               char returnsChar() { return 0; }
+               int returnsInt() { return 0; }
+               long returnsLong() { return 0; }
+               float returnsFloat() { return 0; }
+               double returnsDouble() { return 0; }
+               // This is technically not needed, as the void type is always present
+               void returnsVoid() {}
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        let builtin_class = dex.find_class_by_name("LBuiltInTypes;").unwrap().unwrap();
+
+        let find_type = |name: &str| {
+            dex.types().find(|t| {
+                if let Ok(t) = t {
+                    t.to_string() == name
+                } else {
+                    false
+                }
+            })
+        };
+
+        let boolean_type = find_type("Z");
+        assert!(boolean_type.is_some());
+
+        let byte_type = find_type("B");
+        assert!(byte_type.is_some());
+
+        let short_type = find_type("S");
+        assert!(short_type.is_some());
+
+        let char_type = find_type("C");
+        assert!(char_type.is_some());
+
+        let int_type = find_type("I");
+        assert!(int_type.is_some());
+
+        let long_type = find_type("J");
+        assert!(long_type.is_some());
+
+        let float_type = find_type("F");
+        assert!(float_type.is_some());
+
+        let double_type = find_type("D");
+        assert!(double_type.is_some());
+
+        let void_type = find_type("V");
+        assert!(void_type.is_some());
+
+    }
+);
+
 #[test]
 fn test_iterators() {
     use dex::DexReader;

@@ -2,6 +2,7 @@
 use std::{
     convert::AsRef,
     fmt,
+    num::NonZeroUsize,
     ops::{Deref, Range},
 };
 
@@ -108,7 +109,7 @@ where
         endian: super::Endian,
         offset: uint,
         len: uint,
-        cache_size: usize,
+        cache_size: NonZeroUsize,
         data_section: Range<uint>,
     ) -> Self {
         Self {

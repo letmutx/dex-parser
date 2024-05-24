@@ -2,7 +2,7 @@ use std::{fs::File, io::BufReader, ops::Range};
 
 use adler32;
 use getset::{CopyGetters, Getters};
-use memmap::{Mmap, MmapOptions};
+use memmap2::{Mmap, MmapOptions};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use scroll::{ctx, Pread};
@@ -797,7 +797,7 @@ impl DexReader {
 #[cfg(test)]
 mod tests {
 
-    use memmap::MmapOptions;
+    use memmap2::MmapOptions;
     use std::fs::File;
     use super::Result;
     use std::path::Path;

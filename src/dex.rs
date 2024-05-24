@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, ops::Range};
+use std::{fs::File, io::BufReader, num::NonZeroUsize, ops::Range};
 
 use adler32;
 use getset::{CopyGetters, Getters};
@@ -763,7 +763,7 @@ impl DexReader {
             endian,
             inner.strings_offset(),
             inner.strings_len(),
-            4096,
+            NonZeroUsize::new(4096).unwrap(),
             inner.data_section(),
         );
         Ok(Dex {
@@ -783,7 +783,7 @@ impl DexReader {
             endian,
             inner.strings_offset(),
             inner.strings_len(),
-            4096,
+            NonZeroUsize::new(4096).unwrap(),
             inner.data_section(),
         );
         Ok(Dex {

@@ -325,6 +325,7 @@ impl<'a> ctx::TryFromCtx<'a, Endian> for MapItem {
 }
 
 /// Represents a Dex file
+#[derive(Debug)]
 pub struct Dex<T> {
     /// Source from which this Dex file is loaded from.
     pub(crate) source: Source<T>,

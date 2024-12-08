@@ -3,7 +3,8 @@ use std::{cell::RefCell, cmp::Eq, hash::Hash, num::NonZeroUsize, rc::Rc};
 use lru::LruCache;
 
 /// LRU cache that provides interior mutability
-pub(crate) struct Cache<K, V> {
+#[derive(Debug)]
+pub(crate) struct Cache<K: Hash + Eq, V> {
     inner: Rc<RefCell<LruCache<K, V>>>,
 }
 
@@ -29,7 +30,7 @@ impl<K: Hash + Eq, V: Clone> Cache<K, V> {
     }
 }
 
-impl<K, V> Clone for Cache<K, V> {
+impl<K: Hash + Eq, V> Clone for Cache<K, V> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),

@@ -88,6 +88,7 @@ impl<'a> ctx::TryFromCtx<'a, scroll::Endian> for DexString {
 /// To prevent encoding/decoding Java strings to Rust strings
 /// every time, we cache the strings in memory. This also potentially
 /// reduces I/O because strings are used in a lot of places.
+#[derive(Debug)]
 pub(crate) struct Strings<T> {
     source: Source<T>,
     ///  Offset into the strings section.

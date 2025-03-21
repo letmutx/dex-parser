@@ -286,6 +286,7 @@ pub enum ItemType {
     AnnotationItem = 0x2004,
     EncodedArrayItem = 0x2005,
     AnnotationsDirectoryItem = 0x2006,
+    HiddenAPIClassDataItem = 0xF000,
 }
 
 /// Single item of the MapList.

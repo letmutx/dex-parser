@@ -5,8 +5,10 @@ use std::{
 };
 
 use tempfile::TempDir;
+use dex::code::DebugInfoBytecode;
 use dex::field::FieldId;
 use dex::method::MethodId;
+use dex::string::DexString;
 
 struct TestBuilder {
     root: TempDir,
@@ -60,6 +62,7 @@ impl TestBuilder {
         let android_lib_path = env::var("ANDROID_LIB_PATH").expect("$ANDROID_LIB_PATH not set");
         let _javac = Command::new("javac")
             .args(&self.sources)
+            .arg("-g")
             .current_dir(self.root.path())
             .status()
             .expect("javac failed");
@@ -996,3 +999,48 @@ fn test_iterators() {
         assert!(method_handle_item.is_ok());
     }
 }
+
+test!(
+    test_debug_info,
+    {
+        "DebugBytecodes.java" => r#"
+            public class DebugBytecodes {
+               void testFunc(int param1, int param2) {
+                   int someVar = 1234;
+                   int someVar2 = someVar / 123;
+                   
+                   if (someVar2 > 20) {
+                       return;
+                   }
+                   
+                   
+               }
+            }
+        "#
+    },
+    |dex: dex::Dex<_>| {
+        let builtin_class = dex.find_class_by_name("LDebugBytecodes;").unwrap().unwrap();
+
+        let test_func = builtin_class.methods().find(|m| m.name() == "testFunc").unwrap();
+        
+        assert!(test_func.code().is_some());
+        
+        let code = test_func.code().unwrap();
+        
+        assert!(code.debug_info_item().is_some());
+        
+        let debug_info_item = code.debug_info_item().unwrap();
+        
+        assert_eq!(debug_info_item.line_start(), 4);
+        
+        let parameter_names = debug_info_item.parameter_names();
+        let byte_code = debug_info_item.bytecodes();
+        
+        assert_eq!(parameter_names.len(), 2);
+        assert_eq!(parameter_names.get(0), Some(&Some(DexString::from(String::from("param1")))));
+        assert_eq!(parameter_names.get(1), Some(&Some(DexString::from(String::from("param2")))));
+        
+        assert_eq!(byte_code.len(), 8);
+        assert_eq!(byte_code.last(), Some(&DebugInfoBytecode::EndSequence));
+    }
+);

@@ -172,8 +172,8 @@ where
         let parameters_size = Uleb128::read(source, offset)?;
         let mut parameter_names = Vec::with_capacity(parameters_size as usize);
         for _ in 0..parameters_size {
-            let string_id = Uleb128::read(source, offset)? + 1;
-            parameter_names.push(if string_id != u64::from(crate::NO_INDEX) {
+            let string_id = (Uleb128::read(source, offset)? as u32).overflowing_sub(1).0;
+            parameter_names.push(if string_id != u32::from(crate::NO_INDEX) {
                 Some(dex.get_string(string_id as uint)?)
             } else {
                 None

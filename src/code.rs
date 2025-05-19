@@ -1,13 +1,14 @@
 //! Structures defining the contents of a `Method`'s code.
-use scroll::{ctx, Pread, Uleb128};
+use scroll::{ctx, Pread, Sleb128, Uleb128};
 use std::{fmt, ops::Deref};
 
-use getset::{CopyGetters, Getters};
-
+use crate::jtype::TypeId;
+use crate::string::StringId;
 use crate::{
     encoded_item::EncodedCatchHandlers, error::Error, jtype::Type, string::DexString, uint, ulong,
     ushort,
 };
+use getset::{CopyGetters, Getters};
 
 /// Debug Info of a method.
 /// [Android docs](https://source.android.com/devices/tech/dalvik/dex-format#debug-info-item)
@@ -19,6 +20,59 @@ pub struct DebugInfoItem {
     /// Names of the incoming parameters.
     #[get = "pub"]
     parameter_names: Vec<Option<DexString>>,
+    /// State machine bytecodes
+    #[get = "pub"]
+    bytecodes: Vec<DebugInfoBytecode>,
+}
+
+#[derive(Debug, PartialEq, Getters, CopyGetters)]
+pub struct DebugInfoLocal {
+    /// Register that will contain local
+    #[get_copy = "pub"]
+    register_num: u64,
+    /// String index of the name
+    #[get_copy = "pub"]
+    name_idx: StringId,
+    /// Type index of the type
+    #[get_copy = "pub"]
+    type_idx: TypeId,
+    /// String index of the type signature
+    #[get_copy = "pub"]
+    sig_idx: Option<StringId>,
+}
+
+#[derive(Debug, PartialEq, Getters, CopyGetters)]
+pub struct DebugInfoSpecial {
+    // How many lines to move
+    #[get_copy = "pub"]
+    line_off: i64,
+    // How many instructions to move
+    #[get_copy = "pub"]
+    address_off: u64,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum DebugInfoBytecode {
+    /// Ends the debug info item
+    EndSequence,
+    /// Move to the next instruction
+    AdvancePc(u64),
+    /// Move to the next line
+    AdvanceLine(i64),
+    /// Creates a new variable
+    StartLocal(DebugInfoLocal),
+    /// Destroys a variable
+    EndLocal(u64),
+    /// Recreates a variable
+    RestartLocal(u64),
+    /// Ends a method prologue
+    SetPrologueEnd,
+    /// Begins a method prologue
+    SetEpilogueBegin,
+    /// Sets the file name
+    SetFile(DexString),
+    /// Moves to a new instruction and line and emit both
+    Special(DebugInfoSpecial),
 }
 
 /// Code and Debug Info of a method.
@@ -172,17 +226,80 @@ where
         let parameters_size = Uleb128::read(source, offset)?;
         let mut parameter_names = Vec::with_capacity(parameters_size as usize);
         for _ in 0..parameters_size {
-            let string_id = Uleb128::read(source, offset)? + 1;
-            parameter_names.push(if string_id != u64::from(crate::NO_INDEX) {
+            let string_id = (Uleb128::read(source, offset)? as u32).overflowing_sub(1).0;
+            parameter_names.push(if string_id != u32::from(crate::NO_INDEX) {
                 Some(dex.get_string(string_id as uint)?)
             } else {
                 None
             });
         }
+        let mut bytecodes = Vec::new();
+        loop {
+            let opcode: u8 = source.gread(offset)?;
+
+            let byte_code = match opcode {
+                0x00 => DebugInfoBytecode::EndSequence,
+                0x01 => DebugInfoBytecode::AdvancePc(Uleb128::read(source, offset)?),
+                0x02 => DebugInfoBytecode::AdvanceLine(Sleb128::read(source, offset)?),
+                0x03 => DebugInfoBytecode::StartLocal(DebugInfoLocal {
+                    register_num: Uleb128::read(source, offset)?,
+                    name_idx: (Uleb128::read(source, offset)? as StringId)
+                        .overflowing_sub(1)
+                        .0,
+                    type_idx: (Uleb128::read(source, offset)? as TypeId)
+                        .overflowing_sub(1)
+                        .0,
+                    sig_idx: None,
+                }),
+                0x04 => DebugInfoBytecode::StartLocal(DebugInfoLocal {
+                    register_num: Uleb128::read(source, offset)?,
+                    name_idx: (Uleb128::read(source, offset)? as StringId)
+                        .overflowing_sub(1)
+                        .0,
+                    type_idx: (Uleb128::read(source, offset)? as TypeId)
+                        .overflowing_sub(1)
+                        .0,
+                    sig_idx: Some(
+                        (Uleb128::read(source, offset)? as StringId)
+                            .overflowing_sub(1)
+                            .0,
+                    ),
+                }),
+                0x05 => DebugInfoBytecode::EndLocal(Uleb128::read(source, offset)?),
+                0x06 => DebugInfoBytecode::RestartLocal(Uleb128::read(source, offset)?),
+                0x07 => DebugInfoBytecode::SetPrologueEnd,
+                0x08 => DebugInfoBytecode::SetEpilogueBegin,
+                0x09 => DebugInfoBytecode::SetFile(
+                    dex.get_string(
+                        (Uleb128::read(source, offset)? as StringId)
+                            .overflowing_sub(1)
+                            .0 as uint,
+                    )?,
+                ),
+                _ => {
+                    const DBG_FIRST_SPECIAL: u64 = 0x0a; // the smallest special opcode
+                    const DBG_LINE_BASE: i64 = -4; // the smallest line number increment
+                    const DBG_LINE_RANGE: u64 = 15; // the number of line increments represented
+
+                    let adjusted_opcode = opcode as u64 - DBG_FIRST_SPECIAL;
+
+                    DebugInfoBytecode::Special(DebugInfoSpecial {
+                        line_off: DBG_LINE_BASE + (adjusted_opcode % DBG_LINE_RANGE) as i64,
+                        address_off: (adjusted_opcode / DBG_LINE_RANGE),
+                    })
+                }
+            };
+
+            bytecodes.push(byte_code);
+            if bytecodes.last() == Some(&DebugInfoBytecode::EndSequence) {
+                break;
+            }
+        }
         Ok((
             Self {
                 line_start,
                 parameter_names,
+                bytecodes,
             },
             *offset,
         ))
